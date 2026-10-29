@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Fraunces, Geist, Geist_Mono } from "next/font/google";
+import { PROFILE } from "@/content/portfolio";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,18 +13,40 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const display = Fraunces({
+  variable: "--font-display",
+  subsets: ["latin"],
+  style: ["normal", "italic"],
+});
+
 export const metadata: Metadata = {
-  title: "Nico Chikuji",
-  description: "Nico Chikuji's digital portfolio.",
+  metadataBase: new URL("https://digital-portfolio-nico-builds.vercel.app"),
+  title: "Nico Chikuji | Full-Stack Developer",
+  description:
+    "Full-stack developer building web3, AI, and product systems that perform and scale. Flow beyond limits. Stay Playful, Ship Serious.",
+  authors: [{ name: PROFILE.name, url: PROFILE.github }],
+  openGraph: {
+    title: "Nico Chikuji | Full-Stack Developer",
+    description: PROFILE.summary,
+    type: "website",
+    url: "/",
+    siteName: PROFILE.brand,
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#04141c",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${display.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full">{children}</body>
     </html>
   );
 }
