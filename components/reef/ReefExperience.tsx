@@ -14,8 +14,9 @@ import {
   ZONES,
 } from "@/content/portfolio";
 import {
-  beatIndex,
   clamp,
+  paintBeats,
+  zoneProgress,
   reefScroll,
   scrollToBeat,
   scrollToId,
@@ -120,9 +121,13 @@ export default function ReefExperience() {
       });
       setActive((prev) => (prev === bestId ? prev : bestId));
       const byId = (id: string) => ranges.find((range) => range.id === id);
-      const nextProject = beatIndex(nextProgress, byId("work"), PROJECTS.length);
-      const nextSkill = beatIndex(nextProgress, byId("skills"), SKILL_BEATS);
-      const nextApproach = beatIndex(nextProgress, byId("approach"), APPROACH.length);
+      const nextProject = paintBeats("work", zoneProgress(nextProgress, byId("work")), PROJECTS.length);
+      const nextSkill = paintBeats("skills", zoneProgress(nextProgress, byId("skills")), SKILL_BEATS);
+      const nextApproach = paintBeats(
+        "approach",
+        zoneProgress(nextProgress, byId("approach")),
+        APPROACH.length,
+      );
       setProjectIndex((prev) => (prev === nextProject ? prev : nextProject));
       setSkillIndex((prev) => (prev === nextSkill ? prev : nextSkill));
       setApproachIndex((prev) => (prev === nextApproach ? prev : nextApproach));
@@ -306,13 +311,8 @@ export default function ReefExperience() {
               <h2 className="section-title">{PROFILE.workTitle}</h2>
               <p className="lede">{PROFILE.workLede}</p>
               <div className="stack">
-                {PROJECTS.map((project, index) => (
-                  <article
-                    key={project.name}
-                    className={index === projectIndex ? "beat is-on" : "beat"}
-                    aria-hidden={index !== projectIndex}
-                    inert={index !== projectIndex}
-                  >
+                {PROJECTS.map((project) => (
+                  <article key={project.name} className="beat">
                     <p className="badge">{project.badge}</p>
                     <h3>{project.name}</h3>
                     <p>{project.description}</p>
@@ -376,13 +376,8 @@ export default function ReefExperience() {
               <h2 className="section-title">{PROFILE.skillsTitle}</h2>
               <p className="lede">{PROFILE.skillsLede}</p>
               <div className="stack">
-                {SKILLS.map((group, index) => (
-                  <article
-                    key={group.title}
-                    className={skillIndex === index ? "beat is-on" : "beat"}
-                    aria-hidden={skillIndex !== index}
-                    inert={skillIndex !== index}
-                  >
+                {SKILLS.map((group) => (
+                  <article key={group.title} className="beat">
                     <h3>{group.title}</h3>
                     <ul>
                       {group.points.map((point) => (
@@ -391,11 +386,7 @@ export default function ReefExperience() {
                     </ul>
                   </article>
                 ))}
-                <article
-                  className={skillIndex === SKILLS.length ? "beat is-on" : "beat"}
-                  aria-hidden={skillIndex !== SKILLS.length}
-                  inert={skillIndex !== SKILLS.length}
-                >
+                <article className="beat">
                   <h3>{PROFILE.toolkitTitle}</h3>
                   <div className="chips">
                     {TOOLKIT.map((tool) => (
@@ -437,13 +428,8 @@ export default function ReefExperience() {
               <h2 className="section-title">{PROFILE.approachTitle}</h2>
               <p className="lede">{PROFILE.approachLede}</p>
               <div className="stack">
-                {APPROACH.map((item, index) => (
-                  <article
-                    key={item.title}
-                    className={approachIndex === index ? "beat is-on" : "beat"}
-                    aria-hidden={approachIndex !== index}
-                    inert={approachIndex !== index}
-                  >
+                {APPROACH.map((item) => (
+                  <article key={item.title} className="beat">
                     <p className="badge">{item.index}</p>
                     <h3>{item.title}</h3>
                     <p>{item.body}</p>

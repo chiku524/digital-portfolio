@@ -298,24 +298,28 @@
 }
 
 .stack {
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  position: relative;
   min-height: 8.5rem;
-}
-
-.stack > * {
-  grid-area: 1 / 1;
 }
 
 .beat {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
+  position: absolute;
+  width: 100%;
+  left: 0;
+  top: 0;
 }
 
-.beat.is-on {
+.stack > .beat:first-child {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
+  position: relative;
 }
 
 .stack h3,
@@ -639,29 +643,10 @@
     transition: none;
     animation: none;
   }
-
-  .beat.is-on {
-    animation: none;
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .beat.is-on {
-    animation: card-in 380ms ease;
-  }
 }
 
 @keyframes bob {
   50% {
     transform: translateY(4px);
-  }
-}
-
-@keyframes card-in {
-  from {
-    transform: translateY(8px);
-  }
-  to {
-    transform: none;
   }
 }
