@@ -86,7 +86,7 @@ function Kelp({
     const mesh = ref.current;
     if (!mesh) return;
     const time = clock.elapsedTime;
-    const amp = reefScroll.reducedMotion ? 0.02 : 0.08;
+    const amp = (reefScroll.reducedMotion ? 0.02 : 0.08) * (1 + Math.abs(reefScroll.lean) * 1.8);
     for (let index = 0; index < pieces.length; index += 1) {
       const item = pieces[index];
       dummy.position.set(item.x, item.y, item.z);
@@ -135,8 +135,9 @@ function School({
     if (!mesh || !positions) return;
     const dt = Math.min(delta, 0.05);
     const time = clock.elapsedTime;
-    const amp = reefScroll.reducedMotion ? 0.04 : 0.2;
-    const pace = reefScroll.reducedMotion ? 0.15 : 1;
+    const rush = 1 + Math.abs(reefScroll.lean) * 2.6;
+    const amp = (reefScroll.reducedMotion ? 0.04 : 0.2) * rush;
+    const pace = (reefScroll.reducedMotion ? 0.15 : 1) * rush;
     for (let index = 0; index < fish.length; index += 1) {
       const item = fish[index];
       let x = positions[index] + item.dir * item.speed * dt * pace;
@@ -183,7 +184,7 @@ function Bubbles({
     const positions = motion.current;
     if (!mesh || !positions) return;
     const dt = Math.min(delta, 0.05);
-    const pace = reefScroll.reducedMotion ? 0.2 : 1;
+    const pace = (reefScroll.reducedMotion ? 0.2 : 1) * (1 + Math.abs(reefScroll.lean));
     for (let index = 0; index < bubbles.length; index += 1) {
       const item = bubbles[index];
       let y = positions[index] + item.speed * dt * pace;
@@ -352,7 +353,16 @@ function CameraRig({ mobile }: { mobile: boolean }) {
       look.current.lerp(blendLook.current, s);
     }
 
-    const follow = reefScroll.reducedMotion ? 1 : 1 - Math.exp(-delta * 18);
+    const follow = reefScroll.reducedMotion ? 1 : 1 - Math.exp(-delta * 26);
+    const leanTarget = reefScroll.reducedMotion ? 0 : clamp(reefScroll.velocity / 4200, -1, 1);
+    reefScroll.lean += (leanTarget - reefScroll.lean) * (1 - Math.exp(-delta * 5));
+    const rush = Math.abs(reefScroll.lean);
+    if (!reefScroll.reducedMotion) {
+      desired.current.y -= rush * 0.42;
+      desired.current.z -= rush * 0.9;
+      desired.current.x += Math.sin(progress * 16) * 0.08 + reefScroll.lean * 0.28;
+      look.current.y -= rush * 0.18;
+    }
     if (!booted.current) {
       camera.position.copy(desired.current);
       lookSmoothed.current.copy(look.current);
@@ -362,14 +372,17 @@ function CameraRig({ mobile }: { mobile: boolean }) {
       lookSmoothed.current.lerp(look.current, follow);
     }
     camera.lookAt(lookSmoothed.current);
+    camera.rotateZ(-reefScroll.lean * 0.055);
 
     const work = ranges.find((range) => range.id === "work");
     const project = beatIndex(progress, work, PROJECTS.length);
     writeStation(project, station.current);
     if (glow.current) {
-      glow.current.position.x += (station.current.x - glow.current.position.x) * 0.22;
-      glow.current.position.y += (station.current.y + 0.4 - glow.current.position.y) * 0.22;
-      glow.current.position.z += (station.current.z - glow.current.position.z) * 0.22;
+      const glowFollow = 0.18 + Math.abs(reefScroll.lean) * 0.35;
+      glow.current.position.x += (station.current.x - glow.current.position.x) * glowFollow;
+      glow.current.position.y += (station.current.y + 0.4 - glow.current.position.y) * glowFollow;
+      glow.current.position.z += (station.current.z - glow.current.position.z) * glowFollow;
+      glow.current.intensity = 46 + Math.abs(reefScroll.lean) * 30;
     }
 
     const fogNode = fog.current;

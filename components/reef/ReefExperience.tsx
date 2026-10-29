@@ -13,15 +13,8 @@ import {
   VALUES,
   ZONES,
 } from "@/content/portfolio";
-import {
-  clamp,
-  paintBeats,
-  zoneProgress,
-  reefScroll,
-  scrollToBeat,
-  scrollToId,
-  type ZoneRange,
-} from "./scroll";
+import { mountDiveTimeline } from "./dive-timeline";
+import { reefScroll, scrollToBeat, scrollToId } from "./scroll";
 import "./reef.css";
 
 const ReefCanvas = dynamic(() => import("./ReefCanvas"), {
@@ -76,109 +69,19 @@ export default function ReefExperience() {
 
   useEffect(() => {
     if (!ready) return;
-    let frame = 0;
-    let lenis: { destroy: () => void; on: (event: "scroll", cb: () => void) => void } | null =
-      null;
-
-    const measure = () => {
-      const vh = window.innerHeight;
-      const max = document.documentElement.scrollHeight - vh;
-      const ranges: ZoneRange[] = ZONES.map((zone) => {
-        const el = document.getElementById(zone.id);
-        if (!el || max <= 0) return { id: zone.id, pinStart: 0, pinEnd: 0 };
-        const top = el.getBoundingClientRect().top + window.scrollY;
-        const pinStart = top / max;
-        const pinEnd = Math.max(pinStart, (top + el.offsetHeight - vh) / max);
-        const visible = Math.min(el.getBoundingClientRect().bottom, vh) - Math.max(el.getBoundingClientRect().top, 0);
-        const cover = clamp(visible / vh, 0, 1);
-        const pin = el.querySelector<HTMLElement>(":scope > .pin");
-        if (pin) {
-          pin.style.opacity = cover < 0.04 ? "0" : cover.toFixed(3);
-          pin.inert = cover < 0.35;
-          pin.style.zIndex = String(2 + Math.round(cover * 8));
-        }
-        return { id: zone.id, pinStart, pinEnd };
-      });
-      reefScroll.ranges = ranges;
-      const nextProgress = max <= 0 ? 0 : clamp(window.scrollY / max, 0, 1);
-      reefScroll.progress = nextProgress;
-      if (bar.current) bar.current.style.transform = `scaleX(${nextProgress})`;
-      if (progress.current) {
-        progress.current.setAttribute("aria-valuenow", String(Math.round(nextProgress * 100)));
-      }
-
-      let bestId = ranges[0]?.id ?? "top";
-      let bestVisible = -1;
-      ZONES.forEach((zone) => {
-        const el = document.getElementById(zone.id);
-        if (!el) return;
-        const rect = el.getBoundingClientRect();
-        const visible = Math.min(rect.bottom, vh) - Math.max(rect.top, 0);
-        if (visible > bestVisible) {
-          bestVisible = visible;
-          bestId = zone.id;
-        }
-      });
-      setActive((prev) => (prev === bestId ? prev : bestId));
-      const byId = (id: string) => ranges.find((range) => range.id === id);
-      const nextProject = paintBeats("work", zoneProgress(nextProgress, byId("work")), PROJECTS.length);
-      const nextSkill = paintBeats("skills", zoneProgress(nextProgress, byId("skills")), SKILL_BEATS);
-      const nextApproach = paintBeats(
-        "approach",
-        zoneProgress(nextProgress, byId("approach")),
-        APPROACH.length,
-      );
-      setProjectIndex((prev) => (prev === nextProject ? prev : nextProject));
-      setSkillIndex((prev) => (prev === nextSkill ? prev : nextSkill));
-      setApproachIndex((prev) => (prev === nextApproach ? prev : nextApproach));
-    };
-
-    const onScroll = () => {
-      const max = document.documentElement.scrollHeight - window.innerHeight;
-      reefScroll.progress = max <= 0 ? 0 : clamp(window.scrollY / max, 0, 1);
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(measure);
-    };
-
-    measure();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
-    const observer = new ResizeObserver(onScroll);
-    observer.observe(document.body);
-    document.fonts?.ready.then(onScroll).catch(() => undefined);
-
     const hash = window.location.hash.replace("#", "");
     if (ZONES.some((zone) => zone.id === hash)) scrollToId(hash);
-
-    let cancelled = false;
-    if (!reefScroll.reducedMotion) {
-      void import("lenis").then(({ default: Lenis }) => {
-        if (cancelled || reefScroll.reducedMotion) return;
-        const instance = new Lenis({
-          autoRaf: true,
-          lerp: 0.22,
-          smoothWheel: true,
-          syncTouch: false,
-          allowNestedScroll: true,
-          stopInertiaOnNavigate: true,
-          anchors: false,
-        });
-        lenis = instance;
-        reefScroll.lenis = instance;
-        instance.on("scroll", onScroll);
-      });
-    }
-
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-      observer.disconnect();
-      lenis?.destroy();
-      reefScroll.lenis = null;
-    };
-  }, [ready]);
+    return mountDiveTimeline({
+      bar: bar.current,
+      progressbar: progress.current,
+      onScene: (scene) => {
+        setActive((prev) => (prev === scene.zone ? prev : scene.zone));
+        setProjectIndex((prev) => (prev === scene.project ? prev : scene.project));
+        setSkillIndex((prev) => (prev === scene.skill ? prev : scene.skill));
+        setApproachIndex((prev) => (prev === scene.approach ? prev : scene.approach));
+      },
+    });
+  }, [ready, reduced, mobile]);
 
   const scene = ZONES.find((zone) => zone.id === active) ?? ZONES[0];
   const readout =

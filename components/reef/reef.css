@@ -298,27 +298,20 @@
 }
 
 .stack {
-  display: flex;
-  flex-direction: column;
-  gap: 0.85rem;
-  position: relative;
+  display: grid;
   min-height: 8.5rem;
 }
 
 .beat {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  position: absolute;
+  grid-area: 1 / 1;
   width: 100%;
-  left: 0;
-  top: 0;
+}
+
+.beat h3 {
+  overflow: hidden;
 }
 
 .stack > .beat:first-child {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
   position: relative;
 }
 
