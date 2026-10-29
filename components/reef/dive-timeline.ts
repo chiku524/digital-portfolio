@@ -37,6 +37,50 @@ function placeSolo(id: string, index: number) {
   });
 }
 
+function markCurrent(id: string, index: number) {
+  document.querySelectorAll<HTMLElement>(`#${id} .project-block`).forEach((el, beat) => {
+    const on = beat === index;
+    el.dataset.live = on ? "true" : "false";
+    if (on) el.setAttribute("aria-current", "true");
+    else el.removeAttribute("aria-current");
+  });
+}
+
+function scatterSequence(
+  tl: gsap.core.Timeline,
+  range: { start: number; end: number },
+  reduced: boolean,
+) {
+  const nodes = gsap.utils.toArray<HTMLElement>("#work .project-block");
+  const count = nodes.length;
+  if (!count || range.end <= range.start) return;
+  const span = range.end - range.start;
+  const reveal = span * 0.78;
+  const slice = reveal / count;
+  nodes.forEach((article, index) => {
+    const at = range.start + slice * index;
+    const fade = reduced ? 0.0001 : Math.max(slice * 0.8, 0.0001);
+    tl.set(article, { autoAlpha: 0, y: reduced ? 0 : 18 }, 0);
+    tl.to(article, { autoAlpha: 1, y: 0, duration: fade, ease: "power3.out" }, at);
+  });
+}
+
+function fadeField(
+  tl: gsap.core.Timeline,
+  range: { start: number; end: number },
+  reduced: boolean,
+) {
+  const field = document.querySelector<HTMLElement>("#work .work-field");
+  if (!field || range.end <= range.start) return;
+  const leave = reduced ? 0.0001 : Math.min(0.05, (range.end - range.start) * 0.14);
+  tl.fromTo(
+    field,
+    { autoAlpha: 1 },
+    { autoAlpha: 0, duration: leave, ease: "power2.in", immediateRender: false },
+    Math.max(range.start, range.end - leave),
+  );
+}
+
 function soloSequence(
   tl: gsap.core.Timeline,
   id: string,
@@ -147,7 +191,7 @@ export function mountDiveTimeline(options: {
     const project = beatIndex(progress, byId("work"), PROJECTS.length);
     const skill = beatIndex(progress, byId("skills"), SKILL_BEATS);
     const approach = beatIndex(progress, byId("approach"), APPROACH.length);
-    placeSolo("work", project);
+    markCurrent("work", project);
     placeSolo("skills", skill);
     placeSolo("approach", approach);
     options.onScene({
@@ -211,8 +255,8 @@ export function mountDiveTimeline(options: {
         );
       }
 
-      fadeGroup(tl, "work", spans.work, reduced, false);
-      soloSequence(tl, "work", PROJECTS.length, spans.work, reduced, splits);
+      scatterSequence(tl, spans.work, reduced);
+      fadeField(tl, spans.work, reduced);
 
       fadeGroup(tl, "skills", spans.skills, reduced, false);
       soloSequence(tl, "skills", SKILL_BEATS, spans.skills, reduced, splits);

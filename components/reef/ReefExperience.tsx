@@ -203,71 +203,31 @@ export default function ReefExperience() {
         </section>
 
         <section id="work" className="zone zone--scrub" style={{ ["--weight" as string]: ZONES[2].weight }}>
-          <div className="pin">
-            <div className="card">
-              <div className="card-head">
-                <p className="kicker">{PROFILE.workTitle}</p>
-                <p className="index-label">
-                  {String(projectIndex + 1).padStart(2, "0")} / {String(PROJECTS.length).padStart(2, "0")}
-                </p>
-              </div>
-              <h2 className="section-title">{PROFILE.workTitle}</h2>
-              <p className="lede">{PROFILE.workLede}</p>
-              <div className="stack">
-                {PROJECTS.map((project) => (
-                  <article key={project.name} className="beat">
-                    <p className="badge">{project.badge}</p>
-                    <h3>{project.name}</h3>
-                    <p>{project.description}</p>
-                    <p className="muted">{project.highlight}</p>
-                    <div className={project.links.length > 2 ? "chips" : "links"}>
-                      {project.links.map((link, linkIndex) => (
-                        <a
-                          key={link.href}
-                          className={project.links.length > 2 || linkIndex > 0 ? "text-link" : "button button--primary"}
-                          href={link.href}
-                          target="_blank"
-                          rel="noreferrer"
-                          aria-label={`${link.label}: ${project.name}`}
-                        >
-                          {link.label} <span aria-hidden="true">↗</span>
-                        </a>
-                      ))}
-                    </div>
-                  </article>
-                ))}
-              </div>
-              <div className="ticks" aria-label="Projects">
-                {PROJECTS.map((project, index) => (
-                  <button
-                    key={project.name}
-                    type="button"
-                    className="tick"
-                    data-index={index}
-                    aria-pressed={index === projectIndex}
-                    aria-label={project.name}
-                    onClick={() => scrollToBeat("work", index, PROJECTS.length)}
-                  >
-                    {String(index + 1).padStart(2, "0")}
-                  </button>
-                ))}
-              </div>
-              <div className="pager">
-                <button
-                  type="button"
-                  disabled={projectIndex === 0}
-                  onClick={() => scrollToBeat("work", projectIndex - 1, PROJECTS.length)}
-                >
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  disabled={projectIndex === PROJECTS.length - 1}
-                  onClick={() => scrollToBeat("work", projectIndex + 1, PROJECTS.length)}
-                >
-                  Next
-                </button>
-              </div>
+          <div className="pin pin--field">
+            <div className="work-field">
+              <h2 className="sr-only">{PROFILE.workTitle}</h2>
+              {PROJECTS.map((project) => (
+                <article key={project.name} className="project-block">
+                  <p className="badge">{project.badge}</p>
+                  <h3>{project.name}</h3>
+                  <p className="project-copy">{project.description}</p>
+                  <p className="muted project-note">{project.highlight}</p>
+                  <div className="project-links">
+                    {project.links.map((link) => (
+                      <a
+                        key={link.href}
+                        className="text-link"
+                        href={link.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label={`${link.label}: ${project.name}`}
+                      >
+                        {link.label} <span aria-hidden="true">↗</span>
+                      </a>
+                    ))}
+                  </div>
+                </article>
+              ))}
             </div>
           </div>
         </section>
