@@ -30,7 +30,7 @@ function zoneSpan(id: string, max: number) {
 function placeSolo(id: string, index: number) {
   document.querySelectorAll<HTMLElement>(`#${id} .beat`).forEach((el, beat) => {
     const on = beat === index;
-    el.style.position = on ? "relative" : "absolute";
+    el.dataset.live = on ? "true" : "false";
     el.inert = !on;
     if (on) el.removeAttribute("aria-hidden");
     else el.setAttribute("aria-hidden", "true");
@@ -90,7 +90,6 @@ function soloSequence(
         at + fade * 0.1,
       );
     }
-    if (index < count - 1) tl.set(article, { autoAlpha: 0 }, at + slice);
   });
 }
 
@@ -110,10 +109,12 @@ function fadeGroup(
     tl.to(card, { autoAlpha: 1, y: 0, duration: enter, ease: "power2.out" }, range.start);
   }
   if (!hold) {
+    const slice = Math.max((range.end - range.start) / 14, 0.0001);
+    const leave = reduced ? 0.0001 : Math.min(exit, slice * 0.4);
     tl.to(
       card,
-      { autoAlpha: 0, y: reduced ? 0 : -30, duration: exit, ease: "power2.in" },
-      Math.max(range.start, range.end - exit),
+      { autoAlpha: 0, y: reduced ? 0 : -30, duration: leave, ease: "power2.in" },
+      Math.max(range.start, range.end - leave),
     );
   } else if (range.start > 0.002) {
     tl.fromTo(
