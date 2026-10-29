@@ -42,8 +42,8 @@ const CORAL = ["#ff5d4a", "#ff7a3c", "#ff4d88", "#ffb15a", "#e056ff", "#2ec4b6",
 const FANS = ["#ff6d9a", "#ff8f6b", "#c86bff", "#46d6c5"];
 const TIPS = ["#ffe1c4", "#ffd0e4", "#d8fff6", "#fff1b8"];
 const KELP = ["#147a5a", "#0e5e48", "#1f9a6a", "#0b4a3c"];
-const ROCKS = ["#6d5a48", "#85715a", "#4e4036"];
-const SAND = ["#c4a36a", "#a8844e", "#d2b48a"];
+const ROCKS = ["#3a4e4c", "#2c3e44", "#4d615c"];
+const SAND = ["#2f615c", "#245650", "#3d7368"];
 const FISH = ["#ff8a3d", "#ffd15c", "#4cc3ff", "#f4f7f6", "#ff5fa2"];
 
 function mulberry32(seed: number) {
@@ -184,7 +184,7 @@ export function buildReef(lite: boolean): ReefData {
   const filler = lite ? 16 : 36;
   for (let i = 0; i < filler; i += 1) {
     const t = i / filler;
-    const z = 5 - t * 84;
+    const z = 6 - t * 94;
     const x = Math.sin(t * 17.2) * 6.5 + (rand() - 0.5) * 2.4;
     const y = 0.4 - t * 4.6;
     addColony(x, y, z, 0.55 + rand() * 0.45);
@@ -193,7 +193,7 @@ export function buildReef(lite: boolean): ReefData {
   const kelpCount = lite ? 20 : 46;
   for (let i = 0; i < kelpCount; i += 1) {
     const deep = i < kelpCount * 0.62;
-    const z = deep ? -44 - rand() * 20 : 2 - rand() * 42;
+    const z = deep ? -52 - rand() * 22 : 2 - rand() * 48;
     const x = (rand() - 0.5) * (deep ? 8 : 12);
     const height = 1.6 + rand() * 2.4;
     kelp.push(
@@ -212,15 +212,15 @@ export function buildReef(lite: boolean): ReefData {
     );
   }
 
-  const fishCount = lite ? 16 : 34;
+  const fishCount = lite ? 22 : 46;
   for (let i = 0; i < fishCount; i += 1) {
     fish.push({
-      x: (rand() - 0.5) * 28,
-      y: 2.2 - rand() * 6.4,
-      z: 8 - rand() * 82,
-      speed: 0.45 + rand() * 0.9,
+      x: (rand() - 0.5) * 7.2,
+      y: 1.35 - rand() * 4.8,
+      z: 8 - rand() * 88,
+      speed: 0.55 + rand() * 0.95,
       phase: rand() * Math.PI * 2,
-      scale: 0.5 + rand() * 0.85,
+      scale: 0.95 + rand() * 1.15,
       color: FISH[i % FISH.length],
       dir: rand() > 0.45 ? 1 : -1,
       top: 0,

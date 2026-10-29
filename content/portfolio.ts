@@ -310,16 +310,16 @@ export const SOCIALS: Social[] = [
 ];
 
 export const ZONES = [
-  { id: "top", scene: "Surface", nav: null, weight: 1.65 },
-  { id: "about", scene: "The drop", nav: "About", weight: 1.5 },
+  { id: "top", scene: "Surface", nav: null, weight: 1.4 },
+  { id: "about", scene: "The drop", nav: "About", weight: 1.25 },
   {
     id: "work",
     scene: "Coral garden",
     nav: "Work",
-    weight: 1 + PROJECTS.length * 0.62,
+    weight: 1 + PROJECTS.length * 0.46,
   },
-  { id: "skills", scene: "Kelp forest", nav: "Skills", weight: 4 },
-  { id: "approach", scene: "The arches", nav: "Approach", weight: 3.2 },
+  { id: "skills", scene: "Kelp forest", nav: "Skills", weight: 3.1 },
+  { id: "approach", scene: "The arches", nav: "Approach", weight: 2.45 },
   { id: "contact", scene: "The clearing", nav: "Contact", weight: 0 },
 ] as const;
 

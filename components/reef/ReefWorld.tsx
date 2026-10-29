@@ -18,9 +18,9 @@ const RAYS = [
 ] as const;
 
 const ARCHES = [
-  { position: [0.7, -3.15, -61], rotation: [0.1, 0.35, 0], color: "#ff6a45" },
-  { position: [-0.8, -3.45, -66], rotation: [0.05, -0.2, 0.08], color: "#7d5cff" },
-  { position: [0.45, -3.75, -71], rotation: [-0.05, 0.15, -0.04], color: "#2ec4b6" },
+  { position: [0.7, -3.35, -66], rotation: [0.1, 0.35, 0], color: "#ff6a45" },
+  { position: [-0.8, -3.65, -71], rotation: [0.05, -0.2, 0.08], color: "#7d5cff" },
+  { position: [0.45, -3.95, -76], rotation: [-0.05, 0.15, -0.04], color: "#2ec4b6" },
 ] as const;
 
 function Field({
@@ -140,8 +140,8 @@ function School({
     for (let index = 0; index < fish.length; index += 1) {
       const item = fish[index];
       let x = positions[index] + item.dir * item.speed * dt * pace;
-      if (x > 16) x = -16;
-      if (x < -16) x = 16;
+      if (x > 4.8) x = -4.8;
+      if (x < -4.8) x = 4.8;
       positions[index] = x;
       dummy.position.set(x, item.y + Math.sin(time * 0.9 + item.phase) * amp, item.z);
       dummy.rotation.set(
@@ -274,9 +274,9 @@ function Sand() {
           out vec4 fragColor;
           void main() {
             float c = sin(vPos.x * 0.42 + uTime * 0.5) * sin(vPos.y * 0.36 - uTime * 0.38);
-            vec3 sand = vec3(0.42, 0.32, 0.2);
-            vec3 light = vec3(0.62, 0.86, 0.78);
-            vec3 col = mix(sand, light, smoothstep(0.2, 0.95, c) * 0.4);
+            vec3 sand = vec3(0.07, 0.2, 0.22);
+            vec3 light = vec3(0.16, 0.42, 0.4);
+            vec3 col = mix(sand, light, smoothstep(0.15, 0.92, c) * 0.55);
             fragColor = vec4(col, 1.0);
           }
         `}
@@ -352,7 +352,7 @@ function CameraRig({ mobile }: { mobile: boolean }) {
       look.current.lerp(blendLook.current, s);
     }
 
-    const follow = reefScroll.reducedMotion ? 0.42 : Math.min(0.18, 0.08 + delta);
+    const follow = reefScroll.reducedMotion ? 1 : 1 - Math.exp(-delta * 18);
     if (!booted.current) {
       camera.position.copy(desired.current);
       lookSmoothed.current.copy(look.current);
@@ -367,9 +367,9 @@ function CameraRig({ mobile }: { mobile: boolean }) {
     const project = beatIndex(progress, work, PROJECTS.length);
     writeStation(project, station.current);
     if (glow.current) {
-      glow.current.position.x += (station.current.x - glow.current.position.x) * 0.08;
-      glow.current.position.y += (station.current.y + 0.4 - glow.current.position.y) * 0.08;
-      glow.current.position.z += (station.current.z - glow.current.position.z) * 0.08;
+      glow.current.position.x += (station.current.x - glow.current.position.x) * 0.22;
+      glow.current.position.y += (station.current.y + 0.4 - glow.current.position.y) * 0.22;
+      glow.current.position.z += (station.current.z - glow.current.position.z) * 0.22;
     }
 
     const fogNode = fog.current;
@@ -382,9 +382,9 @@ function CameraRig({ mobile }: { mobile: boolean }) {
         fogNode.far = 26 + above * 18;
       } else {
         fogColor.copy(shallow).lerp(deep, depth);
-        fogColor.lerp(mid, depth * 0.35);
-        fogNode.near = 7 - depth * 2.2;
-        fogNode.far = 22 - depth * 8;
+        fogColor.lerp(mid, depth * 0.45);
+        fogNode.near = 5.2 - depth * 1.5;
+        fogNode.far = 17 - depth * 6;
       }
       fogNode.color.copy(fogColor);
       gl.setClearColor(fogColor);
@@ -433,8 +433,10 @@ export default function ReefWorld({
       coral: new THREE.MeshStandardMaterial({
         color: "#ffffff",
         flatShading: true,
-        roughness: 0.58,
+        roughness: 0.5,
         metalness: 0.02,
+        emissive: "#4a241c",
+        emissiveIntensity: 0.22,
       }),
       fan: new THREE.MeshStandardMaterial({
         color: "#ffffff",
@@ -529,7 +531,7 @@ export default function ReefWorld({
         return (
           <mesh
             key={angle}
-            position={[Math.cos(angle) * 2.3, -4.25, -75 + Math.sin(angle) * 1.3]}
+            position={[Math.cos(angle) * 2.3, -4.4, -80 + Math.sin(angle) * 1.3]}
           >
             <sphereGeometry args={[0.2, 8, 6]} />
             <meshStandardMaterial color="#123832" emissive="#7dffe1" emissiveIntensity={1.6} />

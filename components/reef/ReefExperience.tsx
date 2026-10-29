@@ -151,7 +151,7 @@ export default function ReefExperience() {
         if (cancelled || reefScroll.reducedMotion) return;
         const instance = new Lenis({
           autoRaf: true,
-          lerp: 0.12,
+          lerp: 0.22,
           smoothWheel: true,
           syncTouch: false,
           allowNestedScroll: true,
@@ -233,7 +233,7 @@ export default function ReefExperience() {
             Book a call
           </a>
         </div>
-        <p className="depth-readout" style={{ maxWidth: 1180, margin: "0.35rem auto 0" }}>
+        <p className="depth-readout">
           {readout}
         </p>
       </header>
@@ -307,7 +307,12 @@ export default function ReefExperience() {
               <p className="lede">{PROFILE.workLede}</p>
               <div className="stack">
                 {PROJECTS.map((project, index) => (
-                  <article key={project.name} hidden={index !== projectIndex}>
+                  <article
+                    key={project.name}
+                    className={index === projectIndex ? "beat is-on" : "beat"}
+                    aria-hidden={index !== projectIndex}
+                    inert={index !== projectIndex}
+                  >
                     <p className="badge">{project.badge}</p>
                     <h3>{project.name}</h3>
                     <p>{project.description}</p>
@@ -372,7 +377,12 @@ export default function ReefExperience() {
               <p className="lede">{PROFILE.skillsLede}</p>
               <div className="stack">
                 {SKILLS.map((group, index) => (
-                  <article key={group.title} hidden={skillIndex !== index}>
+                  <article
+                    key={group.title}
+                    className={skillIndex === index ? "beat is-on" : "beat"}
+                    aria-hidden={skillIndex !== index}
+                    inert={skillIndex !== index}
+                  >
                     <h3>{group.title}</h3>
                     <ul>
                       {group.points.map((point) => (
@@ -381,7 +391,11 @@ export default function ReefExperience() {
                     </ul>
                   </article>
                 ))}
-                <article hidden={skillIndex !== SKILLS.length}>
+                <article
+                  className={skillIndex === SKILLS.length ? "beat is-on" : "beat"}
+                  aria-hidden={skillIndex !== SKILLS.length}
+                  inert={skillIndex !== SKILLS.length}
+                >
                   <h3>{PROFILE.toolkitTitle}</h3>
                   <div className="chips">
                     {TOOLKIT.map((tool) => (
@@ -424,7 +438,12 @@ export default function ReefExperience() {
               <p className="lede">{PROFILE.approachLede}</p>
               <div className="stack">
                 {APPROACH.map((item, index) => (
-                  <article key={item.title} hidden={approachIndex !== index}>
+                  <article
+                    key={item.title}
+                    className={approachIndex === index ? "beat is-on" : "beat"}
+                    aria-hidden={approachIndex !== index}
+                    inert={approachIndex !== index}
+                  >
                     <p className="badge">{item.index}</p>
                     <h3>{item.title}</h3>
                     <p>{item.body}</p>

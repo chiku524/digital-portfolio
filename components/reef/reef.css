@@ -76,8 +76,10 @@
   left: 0;
   right: 0;
   z-index: 5;
-  padding: calc(0.7rem + env(safe-area-inset-top)) 1rem 0.85rem;
-  background: linear-gradient(to bottom, rgba(4, 16, 24, 0.78), rgba(4, 16, 24, 0));
+  padding: calc(0.55rem + env(safe-area-inset-top)) 1rem 0.4rem;
+  background: rgba(4, 18, 26, 0.94);
+  border-bottom: 1px solid rgba(186, 255, 236, 0.14);
+  backdrop-filter: blur(18px);
   pointer-events: none;
 }
 
@@ -125,6 +127,11 @@
   font-size: 0.68rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+.depth-readout {
+  max-width: 1180px;
+  margin: 0.2rem auto 0;
 }
 
 .nav-links {
@@ -297,6 +304,18 @@
 
 .stack > * {
   grid-area: 1 / 1;
+}
+
+.beat {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.beat.is-on {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .stack h3,
@@ -524,7 +543,7 @@
 
   .pin,
   .zone--flow .pin {
-    padding-top: calc(4.35rem + env(safe-area-inset-top));
+    padding-top: calc(5.1rem + env(safe-area-inset-top));
   }
 
   .hero-title {
@@ -546,6 +565,42 @@
 
   .zone--flow .card {
     max-height: none;
+  }
+}
+
+@media (max-width: 719px) {
+  .brand-tag,
+  .nav-book {
+    display: none;
+  }
+
+  .nav {
+    flex-wrap: nowrap;
+    gap: 0.35rem;
+  }
+
+  .brand-name {
+    font-size: 1.02rem;
+  }
+
+  .nav-links {
+    flex-wrap: nowrap;
+    gap: 0;
+  }
+
+  .nav-links a {
+    padding-inline: 0.28rem;
+    font-size: 0.78rem;
+    min-height: 40px;
+  }
+
+  .depth-readout {
+    margin-top: 0.05rem;
+  }
+
+  .pin,
+  .zone--flow .pin {
+    padding-top: calc(4.5rem + env(safe-area-inset-top));
   }
 }
 
@@ -585,14 +640,14 @@
     animation: none;
   }
 
-  .stack > :not([hidden]) {
+  .beat.is-on {
     animation: none;
   }
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .stack > :not([hidden]) {
-    animation: card-in 420ms ease;
+  .beat.is-on {
+    animation: card-in 380ms ease;
   }
 }
 
@@ -604,11 +659,9 @@
 
 @keyframes card-in {
   from {
-    opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px);
   }
   to {
-    opacity: 1;
     transform: none;
   }
 }

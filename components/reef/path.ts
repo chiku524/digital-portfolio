@@ -14,9 +14,9 @@ function pose(px: number, py: number, pz: number, lx: number, ly: number, lz: nu
 const POSES: Record<string, [Pose, Pose]> = {
   top: [pose(0, 8.9, 12.2, 0.5, 2.1, -1.6), pose(0.1, 4.5, 7.4, 0.35, 1.45, -2.8)],
   about: [pose(0.15, 4, 6.6, 0.25, 1.15, -2.2), pose(-0.25, 1.9, 1, 0.55, 0.4, -5.5)],
-  skills: [pose(0.35, -1.55, -47, 0.9, -2.15, -53), pose(-0.4, -2.55, -55, 0.1, -3.15, -61)],
-  approach: [pose(0.15, -2.85, -57, 0.1, -3.35, -63), pose(0.3, -3.45, -65, -0.15, -3.85, -71)],
-  contact: [pose(0.1, -3.55, -67, 0, -4.15, -74), pose(-0.05, -3.25, -70, 0, -4.35, -77)],
+  skills: [pose(0.35, -1.85, -54, 0.9, -2.45, -60), pose(-0.35, -2.85, -62, 0.1, -3.45, -68)],
+  approach: [pose(0.15, -3.15, -64, 0.1, -3.7, -70), pose(0.25, -3.7, -72, -0.1, -4.15, -78)],
+  contact: [pose(0.1, -3.85, -74, 0, -4.4, -81), pose(-0.05, -3.55, -77, 0, -4.55, -84)],
 };
 
 const stationA: V3 = { x: 0, y: 0, z: 0 };
@@ -24,9 +24,9 @@ const stationB: V3 = { x: 0, y: 0, z: 0 };
 
 export function writeStation(index: number, out: V3) {
   const t = count <= 1 ? 0 : clamp(index, 0, count - 1) / (count - 1);
-  out.x = Math.sin(t * Math.PI * 3) * 2.8;
-  out.y = 0.15 - t * 2.7;
-  out.z = -8 - t * 36;
+  out.x = Math.sin(t * Math.PI * 3) * 3.8;
+  out.y = 0.2 - t * 3;
+  out.z = -7 - t * 44;
   return out;
 }
 
@@ -47,19 +47,19 @@ function sampleWork(t: number, mobile: boolean, pos: V3, look: V3) {
   const z = stationA.z + (stationB.z - stationA.z) * u;
   if (mobile) {
     pos.x = x;
-    pos.y = y + 1.9;
-    pos.z = z + 6.2;
+    pos.y = y + 1.45;
+    pos.z = z + 4.35;
     look.x = x;
-    look.y = y + 0.62;
-    look.z = z - 0.8;
+    look.y = y + 0.28;
+    look.z = z - 0.35;
     return;
   }
-  pos.x = x - 0.45;
-  pos.y = y + 1.28;
-  pos.z = z + 5.15;
-  look.x = x + 0.7;
-  look.y = y + 0.12;
-  look.z = z - 1.5;
+  pos.x = x - 0.9;
+  pos.y = y + 1.2;
+  pos.z = z + 4.9;
+  look.x = x + 1.15;
+  look.y = y + 0.08;
+  look.z = z - 0.85;
 }
 
 export function samplePose(id: string, t: number, mobile: boolean, pos: V3, look: V3) {
