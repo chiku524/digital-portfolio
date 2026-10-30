@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
+import { useGSAP } from "@gsap/react";
 import {
   APPROACH,
   INTRO_POINTS,
@@ -14,6 +15,8 @@ import {
   ZONES,
 } from "@/content/portfolio";
 import { mountDiveTimeline } from "./dive-timeline";
+import { playIntro } from "./intro";
+import { mountInteractions } from "./interactions";
 import { reefScroll, scrollToBeat, scrollToId } from "./scroll";
 import "./reef.css";
 
@@ -34,6 +37,8 @@ function supportsWebGL() {
 }
 
 export default function ReefExperience() {
+  const root = useRef<HTMLDivElement>(null);
+  const introPlayed = useRef(false);
   const bar = useRef<HTMLSpanElement>(null);
   const progress = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
@@ -83,6 +88,23 @@ export default function ReefExperience() {
     });
   }, [ready, reduced, mobile]);
 
+  useGSAP(
+    () => {
+      if (!ready || !root.current || introPlayed.current) return;
+      introPlayed.current = true;
+      return playIntro(root.current);
+    },
+    { dependencies: [ready], scope: root },
+  );
+
+  useGSAP(
+    () => {
+      if (!ready || !root.current) return;
+      return mountInteractions(root.current);
+    },
+    { dependencies: [ready, reduced, mobile], scope: root },
+  );
+
   const scene = ZONES.find((zone) => zone.id === active) ?? ZONES[0];
   const readout =
     active === "work"
@@ -90,7 +112,16 @@ export default function ReefExperience() {
       : scene.scene;
 
   return (
-    <div className="reef">
+    <div className="reef" ref={root}>
+      <div className="intro-veil" aria-hidden="true">
+        <p className="intro-mark">
+          {PROFILE.brand.split("").map((letter, index) => (
+            <span key={index}>{letter === " " ? "\u00a0" : letter}</span>
+          ))}
+        </p>
+      </div>
+      <div className="cursor-aura" aria-hidden="true" />
+      <div className="reef-grain" aria-hidden="true" />
       <a className="skip-link" href="#main">
         Skip to content
       </a>

@@ -45,7 +45,8 @@ export default function ReefCanvas({
             position: [0, 8.9, 12.2],
           }}
           onCreated={({ gl }) => {
-            gl.toneMapping = THREE.ACESFilmicToneMapping;
+            // Tone mapping is applied in the post-processing stack (see Effects).
+            gl.toneMapping = THREE.NoToneMapping;
             gl.toneMappingExposure = 1.08;
             gl.setClearColor("#9fd4d4");
             gl.domElement.tabIndex = -1;

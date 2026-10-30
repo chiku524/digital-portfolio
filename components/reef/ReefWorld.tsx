@@ -5,9 +5,11 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { AdaptiveDpr } from "@react-three/drei/core/AdaptiveDpr";
 import { Float } from "@react-three/drei/core/Float";
 import { PerformanceMonitor } from "@react-three/drei/core/PerformanceMonitor";
+import { Sparkles } from "@react-three/drei/core/Sparkles";
 import * as THREE from "three";
 import { PROJECTS } from "@/content/portfolio";
 import { samplePose, writeStation, type V3 } from "./path";
+import Effects from "./Effects";
 import { buildReef, type Piece, type Swimmer } from "./reef-data";
 import { beatIndex, clamp, reefScroll, smoothstep } from "./scroll";
 
@@ -274,15 +276,57 @@ function Sand() {
           in vec3 vPos;
           out vec4 fragColor;
           void main() {
-            float c = sin(vPos.x * 0.42 + uTime * 0.5) * sin(vPos.y * 0.36 - uTime * 0.38);
-            vec3 sand = vec3(0.07, 0.2, 0.22);
-            vec3 light = vec3(0.16, 0.42, 0.4);
-            vec3 col = mix(sand, light, smoothstep(0.15, 0.92, c) * 0.55);
+            // Layered caustic web: two drifting cellular interference patterns.
+            vec2 p = vPos.xy * 0.34;
+            float t = uTime * 0.32;
+            float c1 = abs(sin(p.x + sin(p.y * 1.3 + t) * 1.4 + t) * sin(p.y + sin(p.x * 1.1 - t) * 1.2 - t * 0.8));
+            vec2 q = p * 1.9 + vec2(t * 0.4, -t * 0.3);
+            float c2 = abs(sin(q.x + sin(q.y + t * 1.3)) * sin(q.y + sin(q.x - t)));
+            float caustic = pow(1.0 - c1, 6.0) * 0.75 + pow(1.0 - c2, 8.0) * 0.45;
+            vec3 sand = vec3(0.05, 0.16, 0.19);
+            vec3 light = vec3(0.32, 0.72, 0.66);
+            float fade = smoothstep(80.0, 10.0, length(vPos.xy));
+            vec3 col = sand + light * caustic * fade;
             fragColor = vec4(col, 1.0);
           }
         `}
       />
     </mesh>
+  );
+}
+
+function LightRays() {
+  const mats = useRef<(THREE.MeshBasicMaterial | null)[]>([]);
+  useFrame(({ clock }) => {
+    const time = clock.elapsedTime;
+    // Rays shimmer near the surface and dissolve as the dive goes deeper.
+    const depth = 1 - smoothstep(reefScroll.progress * 3.2);
+    mats.current.forEach((mat, index) => {
+      if (!mat) return;
+      const shimmer = reefScroll.reducedMotion ? 1 : 0.65 + Math.sin(time * 0.6 + index * 1.7) * 0.35;
+      mat.opacity = 0.1 * shimmer * (0.25 + depth * 0.75);
+    });
+  });
+  return (
+    <>
+      {RAYS.map((ray, index) => (
+        <mesh key={ray.position.join("-")} position={ray.position} rotation={ray.rotation} scale={ray.scale}>
+          <planeGeometry args={[1, 1]} />
+          <meshBasicMaterial
+            ref={(mat) => {
+              mats.current[index] = mat;
+            }}
+            color="#e7fff8"
+            transparent
+            opacity={0.07}
+            depthWrite={false}
+            blending={THREE.AdditiveBlending}
+            side={THREE.DoubleSide}
+            toneMapped={false}
+          />
+        </mesh>
+      ))}
+    </>
   );
 }
 
@@ -362,6 +406,14 @@ function CameraRig({ mobile }: { mobile: boolean }) {
       desired.current.z -= rush * 0.9;
       desired.current.x += Math.sin(progress * 16) * 0.08 + reefScroll.lean * 0.28;
       look.current.y -= rush * 0.18;
+    }
+    if (reefScroll.intro > 0.0001) {
+      // Page-load descent: start high above the surface and settle into frame.
+      const k = reefScroll.intro;
+      desired.current.y += k * 7.5;
+      desired.current.z += k * 9;
+      desired.current.x -= k * 2.2;
+      look.current.y += k * 2.4;
     }
     if (!booted.current) {
       camera.position.copy(desired.current);
@@ -446,10 +498,10 @@ export default function ReefWorld({
       coral: new THREE.MeshStandardMaterial({
         color: "#ffffff",
         flatShading: true,
-        roughness: 0.5,
-        metalness: 0.02,
-        emissive: "#4a241c",
-        emissiveIntensity: 0.22,
+        metalness: 0.04,
+        roughness: 0.38,
+        emissive: "#5a2418",
+        emissiveIntensity: 0.28,
       }),
       fan: new THREE.MeshStandardMaterial({
         color: "#ffffff",
@@ -459,12 +511,13 @@ export default function ReefWorld({
         transparent: true,
         opacity: 0.92,
       }),
-      tip: new THREE.MeshStandardMaterial({
+      tip: new THREE.MeshPhysicalMaterial({
         color: "#ffffff",
-        flatShading: true,
-        roughness: 0.35,
-        emissive: "#ffd8c8",
-        emissiveIntensity: 0.18,
+        roughness: 0.22,
+        clearcoat: 1,
+        clearcoatRoughness: 0.18,
+        emissive: "#ffc2a8",
+        emissiveIntensity: 0.65,
       }),
       kelp: new THREE.MeshStandardMaterial({
         color: "#ffffff",
@@ -480,18 +533,24 @@ export default function ReefWorld({
         color: "#ffffff",
         roughness: 1,
       }),
-      fish: new THREE.MeshStandardMaterial({
+      fish: new THREE.MeshPhysicalMaterial({
         color: "#ffffff",
         flatShading: true,
-        roughness: 0.42,
+        roughness: 0.26,
+        metalness: 0.3,
+        sheen: 1,
+        sheenColor: new THREE.Color("#bff7ff"),
       }),
-      bubble: new THREE.MeshStandardMaterial({
+      bubble: new THREE.MeshPhysicalMaterial({
         color: "#e9fffb",
         transparent: true,
-        opacity: 0.32,
-        roughness: 0.08,
+        opacity: 0.38,
+        roughness: 0.04,
+        clearcoat: 1,
+        iridescence: 0.8,
+        iridescenceIOR: 1.3,
         emissive: "#9ff6ea",
-        emissiveIntensity: 0.25,
+        emissiveIntensity: 0.55,
       }),
     }),
     [],
@@ -502,7 +561,8 @@ export default function ReefWorld({
       <AdaptiveDpr />
       <hemisphereLight args={["#c9fbff", "#16342c", 0.72]} />
       <ambientLight intensity={0.38} color="#8fd0d4" />
-      <directionalLight position={[6, 14, 8]} intensity={2.5} color="#f3fffb" />
+      <directionalLight position={[6, 14, 8]} intensity={2.4} color="#fff6ea" />
+      <directionalLight position={[-8, 3, -14]} intensity={1.4} color="#3fe0c8" />
       <CameraRig mobile={mobile} />
       <Sand />
       <Water mobile={mobile} />
@@ -515,24 +575,16 @@ export default function ReefWorld({
       <Kelp pieces={reef.kelp} geometry={geos.kelp} material={mats.kelp} />
       <School fish={reef.fish} geometry={geos.fish} material={mats.fish} />
       <Bubbles bubbles={reef.bubbles} geometry={geos.bubble} material={mats.bubble} />
-      {RAYS.map((ray) => (
-        <mesh
-          key={ray.position.join("-")}
-          position={ray.position}
-          rotation={ray.rotation}
-          scale={ray.scale}
-        >
-          <planeGeometry args={[1, 1]} />
-          <meshBasicMaterial
-            color="#e7fff8"
-            transparent
-            opacity={0.07}
-            depthWrite={false}
-            side={THREE.DoubleSide}
-            toneMapped={false}
-          />
-        </mesh>
-      ))}
+      <LightRays />
+      <Sparkles
+        count={mobile ? 60 : 160}
+        scale={[14, 12, 90]}
+        position={[0, 0, -36]}
+        size={mobile ? 1.6 : 2.2}
+        speed={reduced ? 0 : 0.25}
+        opacity={0.55}
+        color="#d8fff6"
+      />
       {ARCHES.map((arch) => (
         <mesh key={arch.color} position={arch.position} rotation={arch.rotation}>
           <torusGeometry args={[1.7, 0.22, 6, 12, Math.PI]} />
@@ -563,6 +615,7 @@ export default function ReefWorld({
           <meshStandardMaterial color="#ffb15a" flatShading emissive="#ffd39a" emissiveIntensity={0.2} />
         </mesh>
       </Float>
+      <Effects mobile={mobile} />
     </PerformanceMonitor>
   );
 }

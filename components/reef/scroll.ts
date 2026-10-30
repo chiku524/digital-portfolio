@@ -11,6 +11,8 @@ export type ZoneRange = {
 
 export const reefScroll = {
   progress: 0,
+  /** 1 while the page-load intro is playing, eased to 0 by GSAP. */
+  intro: 0,
   velocity: 0,
   lean: 0,
   mobile: false,
