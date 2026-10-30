@@ -11,6 +11,9 @@ import { PROJECTS } from "@/content/portfolio";
 import { samplePose, writeStation, type V3 } from "./path";
 import Effects from "./Effects";
 import { buildReef, type Piece, type Swimmer } from "./reef-data";
+import Fishes from "./Fish";
+import { anemone, brainCoral, branchingCoral, kelpFrond, rock, seaFan, seaGrass } from "./geometry";
+import { oceanMotion, oceanTime, reefMaterial } from "./materials";
 import { beatIndex, clamp, reefScroll, smoothstep } from "./scroll";
 
 const RAYS = [
@@ -63,106 +66,14 @@ function Field({
   );
 }
 
-function Kelp({
-  pieces,
-  geometry,
-  material,
-}: {
-  pieces: Piece[];
-  geometry: THREE.BufferGeometry;
-  material: THREE.Material;
-}) {
-  const ref = useRef<THREE.InstancedMesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
-  useLayoutEffect(() => {
-    const mesh = ref.current;
-    if (!mesh) return;
-    const color = new THREE.Color();
-    pieces.forEach((item, index) => {
-      mesh.setColorAt(index, color.set(item.color));
-    });
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [pieces]);
-
-  useFrame(({ clock }) => {
-    const mesh = ref.current;
-    if (!mesh) return;
-    const time = clock.elapsedTime;
-    const amp = (reefScroll.reducedMotion ? 0.02 : 0.08) * (1 + Math.abs(reefScroll.lean) * 1.8);
-    for (let index = 0; index < pieces.length; index += 1) {
-      const item = pieces[index];
-      dummy.position.set(item.x, item.y, item.z);
-      dummy.rotation.set(item.rx, item.ry, item.rz + Math.sin(time * 0.7 + index) * amp);
-      dummy.scale.set(item.sx, item.sy, item.sz);
-      dummy.updateMatrix();
-      mesh.setMatrixAt(index, dummy.matrix);
-    }
-    mesh.instanceMatrix.needsUpdate = true;
+/** Advances the shared clock that drives every swaying / swimming shader. */
+function OceanClock({ reduced }: { reduced: boolean }) {
+  useFrame((_, delta) => {
+    const calm = reduced || reefScroll.reducedMotion ? 0.25 : 1;
+    oceanMotion.value = calm;
+    oceanTime.value += Math.min(delta, 0.05) * (0.6 + calm * 0.4);
   });
-
-  if (pieces.length === 0) return null;
-  return (
-    <instancedMesh ref={ref} args={[geometry, material, pieces.length]} frustumCulled={false} />
-  );
-}
-
-function School({
-  fish,
-  geometry,
-  material,
-}: {
-  fish: Swimmer[];
-  geometry: THREE.BufferGeometry;
-  material: THREE.Material;
-}) {
-  const ref = useRef<THREE.InstancedMesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
-  const motion = useRef<Float32Array | null>(null);
-  useLayoutEffect(() => {
-    const mesh = ref.current;
-    if (!mesh) return;
-    const color = new THREE.Color();
-    const positions = new Float32Array(fish.length);
-    fish.forEach((item, index) => {
-      positions[index] = item.x;
-      mesh.setColorAt(index, color.set(item.color));
-    });
-    motion.current = positions;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [fish]);
-
-  useFrame(({ clock }, delta) => {
-    const mesh = ref.current;
-    const positions = motion.current;
-    if (!mesh || !positions) return;
-    const dt = Math.min(delta, 0.05);
-    const time = clock.elapsedTime;
-    const rush = 1 + Math.abs(reefScroll.lean) * 2.6;
-    const amp = (reefScroll.reducedMotion ? 0.04 : 0.2) * rush;
-    const pace = (reefScroll.reducedMotion ? 0.15 : 1) * rush;
-    for (let index = 0; index < fish.length; index += 1) {
-      const item = fish[index];
-      let x = positions[index] + item.dir * item.speed * dt * pace;
-      if (x > 4.8) x = -4.8;
-      if (x < -4.8) x = 4.8;
-      positions[index] = x;
-      dummy.position.set(x, item.y + Math.sin(time * 0.9 + item.phase) * amp, item.z);
-      dummy.rotation.set(
-        Math.sin(time * 1.2 + item.phase) * 0.12,
-        0,
-        item.dir > 0 ? -Math.PI / 2 : Math.PI / 2,
-      );
-      dummy.scale.setScalar(item.scale);
-      dummy.updateMatrix();
-      mesh.setMatrixAt(index, dummy.matrix);
-    }
-    mesh.instanceMatrix.needsUpdate = true;
-  });
-
-  if (fish.length === 0) return null;
-  return (
-    <instancedMesh ref={ref} args={[geometry, material, fish.length]} frustumCulled={false} />
-  );
+  return null;
 }
 
 function Bubbles({
@@ -345,8 +256,8 @@ function CameraRig({ mobile }: { mobile: boolean }) {
   const station = useRef<V3>({ x: 0, y: 0, z: 0 });
   const blendPos = useRef(new THREE.Vector3());
   const blendLook = useRef(new THREE.Vector3());
-  const shallow = useMemo(() => new THREE.Color("#127888"), []);
-  const mid = useMemo(() => new THREE.Color("#083848"), []);
+  const shallow = useMemo(() => new THREE.Color("#0e6a80"), []);
+  const mid = useMemo(() => new THREE.Color("#06344c"), []);
   const deep = useMemo(() => new THREE.Color("#070d16"), []);
   const sky = useMemo(() => new THREE.Color("#b7ebe8"), []);
   const fogColor = useMemo(() => new THREE.Color("#127888"), []);
@@ -487,65 +398,63 @@ export default function ReefWorld({
   const reef = useMemo(() => buildReef(mobile), [mobile]);
   const geos = useMemo(
     () => ({
-      branch: new THREE.CylinderGeometry(0.09, 0.2, 1, 5),
-      fan: new THREE.PlaneGeometry(1, 1.15),
-      brain: new THREE.SphereGeometry(0.55, 6, 5),
-      tip: new THREE.SphereGeometry(0.16, 6, 5),
-      kelp: new THREE.CylinderGeometry(0.04, 0.07, 1, 4),
-      rock: new THREE.IcosahedronGeometry(0.55, 0),
-      disc: new THREE.CircleGeometry(1, 7),
-      fish: new THREE.ConeGeometry(0.13, 0.58, 4),
-      bubble: new THREE.SphereGeometry(0.08, 6, 5),
+      branch: branchingCoral("staghorn", mobile),
+      finger: branchingCoral("finger", mobile),
+      fan: seaFan(mobile),
+      brain: brainCoral(mobile),
+      tip: new THREE.SphereGeometry(0.16, 10, 8),
+      kelp: kelpFrond(mobile),
+      rock: rock(mobile),
+      anemone: anemone(mobile),
+      grass: seaGrass(mobile),
+      disc: new THREE.CircleGeometry(1, 18),
+      bubble: new THREE.SphereGeometry(0.08, 8, 6),
     }),
-    [],
+    [mobile],
   );
   const mats = useMemo(
     () => ({
-      coral: new THREE.MeshStandardMaterial({
-        color: "#ffffff",
-        flatShading: true,
-        metalness: 0.04,
-        roughness: 0.38,
-        emissive: "#5a2418",
-        emissiveIntensity: 0.28,
-      }),
-      fan: new THREE.MeshStandardMaterial({
-        color: "#ffffff",
-        flatShading: true,
-        roughness: 0.42,
+      coral: reefMaterial({ key: "coral", roughness: 0.78, sss: 0.16 }),
+      brain: reefMaterial({ key: "brain", roughness: 0.86, sss: 0.1 }),
+      fan: reefMaterial({
+        key: "fan",
+        roughness: 0.7,
+        sss: 0.22,
         side: THREE.DoubleSide,
-        transparent: true,
-        opacity: 0.92,
+        sway: { amp: 0.06, freq: 0.8, base: -0.55, height: 1.15 },
       }),
       tip: new THREE.MeshPhysicalMaterial({
         color: "#ffffff",
-        roughness: 0.22,
-        clearcoat: 1,
-        clearcoatRoughness: 0.18,
+        roughness: 0.35,
+        clearcoat: 0.6,
+        clearcoatRoughness: 0.4,
         emissive: "#ffc2a8",
-        emissiveIntensity: 0.65,
+        emissiveIntensity: 0.35,
       }),
-      kelp: new THREE.MeshStandardMaterial({
-        color: "#ffffff",
-        flatShading: true,
-        roughness: 0.72,
+      kelp: reefMaterial({
+        key: "kelp",
+        roughness: 0.55,
+        sss: 0.28,
+        side: THREE.DoubleSide,
+        sway: { amp: 0.32, freq: 0.7, base: -0.5, height: 1 },
       }),
-      rock: new THREE.MeshStandardMaterial({
-        color: "#ffffff",
-        flatShading: true,
-        roughness: 0.9,
+      grass: reefMaterial({
+        key: "grass",
+        roughness: 0.6,
+        sss: 0.2,
+        side: THREE.DoubleSide,
+        sway: { amp: 0.14, freq: 1.3, base: 0, height: 1 },
       }),
+      anemone: reefMaterial({
+        key: "anemone",
+        roughness: 0.45,
+        sss: 0.4,
+        sway: { amp: 0.07, freq: 1.1, base: 0.15, height: 0.45 },
+      }),
+      rock: reefMaterial({ key: "rock", roughness: 0.95 }),
       sand: new THREE.MeshStandardMaterial({
         color: "#ffffff",
         roughness: 1,
-      }),
-      fish: new THREE.MeshPhysicalMaterial({
-        color: "#ffffff",
-        flatShading: true,
-        roughness: 0.26,
-        metalness: 0.3,
-        sheen: 1,
-        sheenColor: new THREE.Color("#bff7ff"),
       }),
       bubble: new THREE.MeshPhysicalMaterial({
         color: "#e9fffb",
@@ -569,17 +478,21 @@ export default function ReefWorld({
       <ambientLight intensity={0.38} color="#8fd0d4" />
       <directionalLight position={[6, 14, 8]} intensity={2.4} color="#fff6ea" />
       <directionalLight position={[-8, 3, -14]} intensity={1.4} color="#3fe0c8" />
+      <OceanClock reduced={reduced} />
       <CameraRig mobile={mobile} />
       <Sand />
       <Water mobile={mobile} />
       <Field pieces={reef.discs} geometry={geos.disc} material={mats.sand} />
       <Field pieces={reef.rocks} geometry={geos.rock} material={mats.rock} />
-      <Field pieces={reef.brains} geometry={geos.brain} material={mats.coral} />
-      <Field pieces={reef.branches} geometry={geos.branch} material={mats.coral} />
+      <Field pieces={reef.brains} geometry={geos.brain} material={mats.brain} />
+      <Field pieces={reef.branches.filter((_, i) => i % 3 !== 0)} geometry={geos.branch} material={mats.coral} />
+      <Field pieces={reef.branches.filter((_, i) => i % 3 === 0)} geometry={geos.finger} material={mats.coral} />
+      <Field pieces={reef.anemones} geometry={geos.anemone} material={mats.anemone} />
+      <Field pieces={reef.grass} geometry={geos.grass} material={mats.grass} />
       <Field pieces={reef.fans} geometry={geos.fan} material={mats.fan} />
       <Field pieces={reef.tips} geometry={geos.tip} material={mats.tip} />
-      <Kelp pieces={reef.kelp} geometry={geos.kelp} material={mats.kelp} />
-      <School fish={reef.fish} geometry={geos.fish} material={mats.fish} />
+      <Field pieces={reef.kelp} geometry={geos.kelp} material={mats.kelp} />
+      <Fishes flocks={reef.flocks} lite={mobile} />
       <Bubbles bubbles={reef.bubbles} geometry={geos.bubble} material={mats.bubble} />
       <LightRays />
       <Sparkles

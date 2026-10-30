@@ -26,7 +26,19 @@ export type Swimmer = {
   top: number;
 };
 
+export type Flock = {
+  species: "clown" | "tang" | "angel" | "chromis";
+  count: number;
+  x: number;
+  y: number;
+  z: number;
+  radius: number;
+};
+
 export type ReefData = {
+  anemones: Piece[];
+  grass: Piece[];
+  flocks: Flock[];
   branches: Piece[];
   fans: Piece[];
   brains: Piece[];
@@ -44,6 +56,8 @@ const TIPS = ["#ffe1c4", "#ffd0e4", "#d8fff6", "#fff1b8"];
 const KELP = ["#147a5a", "#0e5e48", "#1f9a6a", "#0b4a3c"];
 const ROCKS = ["#3a4e4c", "#2c3e44", "#4d615c"];
 const SAND = ["#2f615c", "#245650", "#3d7368"];
+const ANEMONES = ["#ff9ec7", "#c7a6ff", "#9fffd0", "#ffd27a", "#ff8f8f"];
+const GRASS = ["#2f8f5a", "#3c9e63", "#2a7a52", "#4a9a5a"];
 const FISH = ["#ff8a3d", "#ffd15c", "#4cc3ff", "#f4f7f6", "#ff5fa2"];
 
 function mulberry32(seed: number) {
@@ -84,6 +98,9 @@ export function buildReef(lite: boolean): ReefData {
   const fish: Swimmer[] = [];
   const bubbles: Swimmer[] = [];
   const spot: V3 = { x: 0, y: 0, z: 0 };
+  const anemones: Piece[] = [];
+  const grass: Piece[] = [];
+  const flocks: Flock[] = [];
 
   const addColony = (x: number, y: number, z: number, scale: number) => {
     brains.push(
@@ -156,6 +173,23 @@ export function buildReef(lite: boolean): ReefData {
           0.45 + rand() * 0.7,
           TIPS[k % TIPS.length],
         ),
+      );
+    }
+    const ground = y - 1.12 * scale;
+    if (rand() > 0.5) {
+      const ang = rand() * Math.PI * 2;
+      const s = (0.8 + rand() * 0.6) * scale;
+      anemones.push(
+        piece(x + Math.cos(ang) * 1.1 * scale, ground, z + Math.sin(ang) * 1.1 * scale, 0, rand() * Math.PI, 0, s, s * (0.9 + rand() * 0.3), s, ANEMONES[Math.floor(rand() * ANEMONES.length)]),
+      );
+    }
+    const tufts = lite ? 2 : 5;
+    for (let k = 0; k < tufts; k += 1) {
+      const ang = rand() * Math.PI * 2;
+      const rad = (1.1 + rand() * 0.9) * scale;
+      const s = 0.7 + rand() * 0.8;
+      grass.push(
+        piece(x + Math.cos(ang) * rad, ground - 0.05, z + Math.sin(ang) * rad, 0, rand() * Math.PI, 0, s, s * (0.8 + rand() * 0.8), s, GRASS[Math.floor(rand() * GRASS.length)]),
       );
     }
     if (rand() > 0.45) {
@@ -243,5 +277,29 @@ export function buildReef(lite: boolean): ReefData {
     });
   }
 
-  return { branches, fans, brains, tips, kelp, rocks, discs, fish, bubbles };
+  const clownHomes = lite ? 3 : 7;
+  anemones.forEach((home, index) => {
+    if (index % 2 !== 0 || flocks.length >= clownHomes) return;
+    flocks.push({ species: "clown", count: lite ? 2 : 3, x: home.x, y: home.y + 0.45 * home.sy, z: home.z, radius: 0.45 });
+  });
+  const schools: Array<[Flock["species"], number, number, number]> = [
+    ["chromis", lite ? 3 : 6, lite ? 7 : 14, 1.6],
+    ["tang", lite ? 2 : 4, 3, 2.2],
+    ["angel", lite ? 2 : 3, 2, 2.4],
+  ];
+  schools.forEach(([species, groups, count, radius], s) => {
+    for (let g = 0; g < groups; g += 1) {
+      const t = (g + 0.3 + s * 0.27) / groups;
+      flocks.push({
+        species,
+        count,
+        x: Math.sin(t * 17.2 + s) * 3.6,
+        y: 0.4 - t * 4.6 + 0.7 + rand() * 0.9,
+        z: 6 - t * 86,
+        radius,
+      });
+    }
+  });
+
+  return { anemones, grass, flocks, branches, fans, brains, tips, kelp, rocks, discs, fish, bubbles };
 }
