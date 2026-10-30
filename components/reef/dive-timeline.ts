@@ -22,8 +22,15 @@ function zoneSpan(id: string, max: number) {
   const el = document.getElementById(id);
   if (!el || max <= 0) return { start: 0, end: 0 };
   const top = el.getBoundingClientRect().top + window.scrollY;
-  const start = top / max;
-  const end = Math.max(start, (top + el.offsetHeight - window.innerHeight) / max);
+  let start = top / max;
+  let end = Math.max(start, (top + el.offsetHeight - window.innerHeight) / max);
+  if (id === "contact") {
+    // The last section can be exactly one viewport tall, which collapses its range to a
+    // single point at progress 1 that scrub never quite reaches. Start it while it is
+    // still rising into view and let it run to the very end of the page instead.
+    start = Math.min(start, Math.max(0, (top - window.innerHeight * 0.55) / max));
+    end = 1;
+  }
   return { start, end };
 }
 
@@ -388,8 +395,13 @@ export function mountDiveTimeline(options: {
       const el = document.getElementById(id);
       if (!el || max <= 0) return { id, pinStart: 0, pinEnd: 0 } satisfies ZoneRange;
       const top = el.getBoundingClientRect().top + window.scrollY;
-      const pinStart = top / max;
-      return { id, pinStart, pinEnd: Math.max(pinStart, (top + el.offsetHeight - vh) / max) };
+      let pinStart = top / max;
+      let pinEnd = Math.max(pinStart, (top + el.offsetHeight - vh) / max);
+      if (id === "contact") {
+        pinStart = Math.min(pinStart, Math.max(0, (top - vh * 0.55) / max));
+        pinEnd = 1;
+      }
+      return { id, pinStart, pinEnd };
     });
   };
 
