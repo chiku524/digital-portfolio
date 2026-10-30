@@ -177,6 +177,31 @@ function fadeGroup(
   }
 }
 
+/** Socials drift up out of open water one by one; scrubbed, so they sink back on scroll-up. */
+function socialRail(tl: gsap.core.Timeline, range: { start: number; end: number }, reduced: boolean) {
+  const rail = document.querySelector<HTMLElement>("#contact .social-rail");
+  if (!rail || range.end <= range.start) return;
+  const items = [rail.querySelector(".social-rail-title"), ...rail.querySelectorAll(".social")].filter(Boolean);
+  const span = range.end - range.start;
+  const at = range.start + (reduced ? 0 : Math.min(0.02, span * 0.12));
+  const each = reduced ? 0.0001 : Math.min(0.022, span * 0.14);
+  tl.fromTo(
+    items,
+    { autoAlpha: 0, y: reduced ? 0 : 34, filter: reduced ? "none" : "blur(8px)" },
+    {
+      autoAlpha: 1,
+      y: 0,
+      filter: "blur(0px)",
+      duration: each,
+      stagger: reduced ? 0 : each * 0.45,
+      ease: "power3.out",
+      immediateRender: true,
+      clearProps: "filter",
+    },
+    at,
+  );
+}
+
 export function mountDiveTimeline(options: {
   bar: HTMLElement | null;
   progressbar: HTMLElement | null;
@@ -271,6 +296,7 @@ export function mountDiveTimeline(options: {
       soloSequence(tl, "approach", APPROACH.length, spans.approach, reduced, splits);
 
       fadeGroup(tl, "contact", spans.contact, reduced, true);
+      socialRail(tl, spans.contact, reduced);
     });
 
     const progress = reefScroll.progress;

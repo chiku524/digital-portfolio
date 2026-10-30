@@ -1174,3 +1174,63 @@ html.lenis body {
 .lenis.lenis-stopped {
   overflow: clip;
 }
+
+/* Contact: socials float in the open water to the right of the contact card. */
+.social-rail {
+  pointer-events: auto;
+  width: min(36rem, 100%);
+}
+
+.social-rail-title {
+  margin: 0 0 0.6rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #bffff3;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+}
+
+.social-rail .socials {
+  margin: 0;
+  gap: 0.6rem;
+}
+
+.social-rail .social {
+  padding: 0.8rem 1rem;
+  border-radius: 18px;
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.08), transparent 45%),
+    rgba(4, 16, 22, 0.72);
+  border: 1px solid var(--hairline);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 18px 40px -20px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  will-change: transform, opacity;
+}
+
+.social-rail .social:hover {
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.12), transparent 45%),
+    rgba(8, 30, 36, 0.8);
+  border-color: rgba(150, 255, 230, 0.55);
+}
+
+@media (max-width: 959px) {
+  #contact .pin {
+    flex-direction: column;
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 960px) {
+  #contact .social-rail {
+    position: absolute;
+    right: max(3rem, 5vw);
+    bottom: max(4rem, 9vh);
+    width: min(25rem, 31vw);
+  }
+
+  #contact .social-rail .socials {
+    grid-template-columns: 1fr;
+  }
+}

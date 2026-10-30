@@ -368,17 +368,6 @@ export default function ReefExperience() {
                 </a>
               </p>
               <p className="muted">{PROFILE.emailNote}</p>
-              <h3>{PROFILE.socialTitle}</h3>
-              <div className="socials">
-                {SOCIALS.map((social) => (
-                  <a key={social.label} className="social" href={social.href} target="_blank" rel="noreferrer">
-                    <strong>
-                      {social.label} · {social.handle}
-                    </strong>
-                    <span className="muted">{social.note}</span>
-                  </a>
-                ))}
-              </div>
               <p className="badge">{PROFILE.introBadge}</p>
               <h3>{PROFILE.introTitle}</h3>
               <ul>
@@ -410,6 +399,19 @@ export default function ReefExperience() {
                 </p>
               </footer>
             </div>
+            <aside className="social-rail" aria-label={PROFILE.socialTitle}>
+                <h3 className="social-rail-title">{PROFILE.socialTitle}</h3>
+                <div className="socials">
+                  {SOCIALS.map((social) => (
+                    <a key={social.label} className="social" href={social.href} target="_blank" rel="noreferrer">
+                      <strong>
+                        {social.label} · {social.handle}
+                      </strong>
+                      <span className="muted">{social.note}</span>
+                    </a>
+                  ))}
+                </div>
+            </aside>
           </div>
         </section>
       </main>
