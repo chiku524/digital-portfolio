@@ -1,5 +1,6 @@
 import gsap from "gsap";
 import { ScrollToPlugin } from "gsap/ScrollToPlugin";
+import { getLenis } from "./smooth";
 
 gsap.registerPlugin(ScrollToPlugin);
 
@@ -11,6 +12,8 @@ export type ZoneRange = {
 
 export const reefScroll = {
   progress: 0,
+  /** Damped copy of progress, advanced in the R3F frame loop. */
+  smooth: 0,
   /** 1 while the page-load intro is playing, eased to 0 by GSAP. */
   intro: 0,
   velocity: 0,
@@ -56,6 +59,11 @@ export function zoneAt(progress: number, ranges: ZoneRange[]) {
 export function scrollToY(top: number) {
   if (reefScroll.reducedMotion) {
     window.scrollTo(0, top);
+    return;
+  }
+  const lenis = getLenis();
+  if (lenis) {
+    lenis.scrollTo(top, { duration: 1.4, easing: (t) => 1 - Math.pow(1 - t, 4) });
     return;
   }
   gsap.to(window, {

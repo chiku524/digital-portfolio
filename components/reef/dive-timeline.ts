@@ -185,17 +185,22 @@ export function mountDiveTimeline(options: {
   const splits: Split[] = [];
   let ctx: gsap.Context | null = null;
 
-  const publish = (progress: number) => {
+  const last = { project: -1, skill: -1, approach: -1, zone: "" };
+  const publish = (progress: number, force = false) => {
     const ranges = reefScroll.ranges;
     const byId = (id: string) => ranges.find((range) => range.id === id);
     const project = beatIndex(progress, byId("work"), PROJECTS.length);
     const skill = beatIndex(progress, byId("skills"), SKILL_BEATS);
     const approach = beatIndex(progress, byId("approach"), APPROACH.length);
-    markCurrent("work", project);
-    placeSolo("skills", skill);
-    placeSolo("approach", approach);
+    const zone = zoneAt(progress, ranges);
+    // Only touch the DOM / React when a beat actually changes, not on every scroll tick.
+    if (!force && project === last.project && skill === last.skill && approach === last.approach && zone === last.zone) return;
+    if (force || project !== last.project) markCurrent("work", project);
+    if (force || skill !== last.skill) placeSolo("skills", skill);
+    if (force || approach !== last.approach) placeSolo("approach", approach);
+    Object.assign(last, { project, skill, approach, zone });
     options.onScene({
-      zone: zoneAt(progress, ranges),
+      zone,
       project,
       skill,
       approach,
@@ -224,7 +229,8 @@ export function mountDiveTimeline(options: {
           trigger: document.documentElement,
           start: "top top",
           end: "max",
-          scrub: reduced ? true : reefScroll.mobile ? 0.35 : 0.6,
+          // Lenis already smooths wheel input, so a light scrub keeps text in step with the camera.
+          scrub: reduced ? true : reefScroll.mobile ? 0.3 : 0.45,
           invalidateOnRefresh: true,
           onUpdate: (self) => {
             reefScroll.progress = self.progress;
@@ -268,7 +274,7 @@ export function mountDiveTimeline(options: {
     });
 
     const progress = reefScroll.progress;
-    publish(progress);
+    publish(progress, true);
     ScrollTrigger.refresh();
   };
 

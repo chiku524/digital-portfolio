@@ -6,7 +6,7 @@ import { BlendFunction, ToneMappingMode } from "postprocessing";
 /** Premium finishing pass: soft bloom on emissive highlights, film grain and a lens vignette. */
 export default function Effects({ mobile }: { mobile: boolean }) {
   return (
-    <EffectComposer multisampling={mobile ? 0 : 4} enableNormalPass={false}>
+    <EffectComposer multisampling={mobile ? 0 : 2} enableNormalPass={false}>
       <Bloom
         mipmapBlur
         luminanceThreshold={0.82}

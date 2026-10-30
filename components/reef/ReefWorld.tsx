@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { AdaptiveDpr } from "@react-three/drei/core/AdaptiveDpr";
 import { Float } from "@react-three/drei/core/Float";
@@ -354,7 +354,11 @@ function CameraRig({ mobile }: { mobile: boolean }) {
 
   useFrame((_, delta) => {
     const ranges = reefScroll.ranges;
-    const progress = reefScroll.progress;
+    // Critically damped follow of scroll progress: the camera glides instead of snapping.
+    const raw = reefScroll.progress;
+    if (reefScroll.reducedMotion || !booted.current) reefScroll.smooth = raw;
+    else reefScroll.smooth += (raw - reefScroll.smooth) * (1 - Math.exp(-Math.min(delta, 0.1) * 7));
+    const progress = reefScroll.smooth;
     let id = "top";
     let t = 0;
     let blend = 0;
@@ -397,7 +401,7 @@ function CameraRig({ mobile }: { mobile: boolean }) {
       look.current.lerp(blendLook.current, s);
     }
 
-    const follow = reefScroll.reducedMotion ? 1 : 1 - Math.exp(-delta * 26);
+    const follow = reefScroll.reducedMotion ? 1 : 1 - Math.exp(-Math.min(delta, 0.1) * 10);
     const leanTarget = reefScroll.reducedMotion ? 0 : clamp(reefScroll.velocity / 4200, -1, 1);
     reefScroll.lean += (leanTarget - reefScroll.lean) * (1 - Math.exp(-delta * 5));
     const rush = Math.abs(reefScroll.lean);
@@ -430,7 +434,7 @@ function CameraRig({ mobile }: { mobile: boolean }) {
     const project = beatIndex(progress, work, PROJECTS.length);
     writeStation(project, station.current);
     if (glow.current) {
-      const glowFollow = 0.18 + Math.abs(reefScroll.lean) * 0.35;
+      const glowFollow = 1 - Math.exp(-Math.min(delta, 0.1) * (6 + Math.abs(reefScroll.lean) * 8));
       glow.current.position.x += (station.current.x - glow.current.position.x) * glowFollow;
       glow.current.position.y += (station.current.y + 0.4 - glow.current.position.y) * glowFollow;
       glow.current.position.z += (station.current.z - glow.current.position.z) * glowFollow;
@@ -478,6 +482,8 @@ export default function ReefWorld({
   mobile: boolean;
   reduced: boolean;
 }) {
+  // Post-processing is dropped automatically if the GPU can't hold frame rate.
+  const [fx, setFx] = useState(true);
   const reef = useMemo(() => buildReef(mobile), [mobile]);
   const geos = useMemo(
     () => ({
@@ -557,7 +563,7 @@ export default function ReefWorld({
   );
 
   return (
-    <PerformanceMonitor>
+    <PerformanceMonitor onDecline={() => setFx(false)} flipflops={2} onFallback={() => setFx(false)}>
       <AdaptiveDpr />
       <hemisphereLight args={["#c9fbff", "#16342c", 0.72]} />
       <ambientLight intensity={0.38} color="#8fd0d4" />
@@ -615,7 +621,7 @@ export default function ReefWorld({
           <meshStandardMaterial color="#ffb15a" flatShading emissive="#ffd39a" emissiveIntensity={0.2} />
         </mesh>
       </Float>
-      <Effects mobile={mobile} />
+      {fx ? <Effects mobile={mobile} /> : null}
     </PerformanceMonitor>
   );
 }

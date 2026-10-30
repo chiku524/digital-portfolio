@@ -16,6 +16,7 @@ import {
 } from "@/content/portfolio";
 import { mountDiveTimeline } from "./dive-timeline";
 import { playIntro } from "./intro";
+import { mountSmoothScroll } from "./smooth";
 import { mountInteractions } from "./interactions";
 import { reefScroll, scrollToBeat, scrollToId } from "./scroll";
 import "./reef.css";
@@ -74,9 +75,10 @@ export default function ReefExperience() {
 
   useEffect(() => {
     if (!ready) return;
+    const unsmooth = mountSmoothScroll(reduced);
     const hash = window.location.hash.replace("#", "");
     if (ZONES.some((zone) => zone.id === hash)) scrollToId(hash);
-    return mountDiveTimeline({
+    const unmount = mountDiveTimeline({
       bar: bar.current,
       progressbar: progress.current,
       onScene: (scene) => {
@@ -86,6 +88,10 @@ export default function ReefExperience() {
         setApproachIndex((prev) => (prev === scene.approach ? prev : scene.approach));
       },
     });
+    return () => {
+      unmount();
+      unsmooth();
+    };
   }, [ready, reduced, mobile]);
 
   useGSAP(
