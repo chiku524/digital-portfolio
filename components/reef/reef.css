@@ -1253,3 +1253,67 @@ html.lenis body {
     transform: none !important;
   }
 }
+
+/* Contact: wide two-column panel that fits a desktop viewport beside the social rail. */
+.contact-grid {
+  display: grid;
+  gap: 0.4rem 1.8rem;
+}
+
+.contact-col > :first-child {
+  margin-top: 0.6rem;
+}
+
+@media (min-width: 960px) {
+  #contact .pin {
+    padding-top: calc(5.2rem + env(safe-area-inset-top));
+    padding-bottom: 2rem;
+    padding-right: calc(min(25rem, 31vw) + max(3rem, 5vw) + 2.5rem);
+    padding-left: max(3rem, 5vw);
+  }
+
+  #contact .card {
+    width: min(64rem, 100%);
+    padding: 1.3rem 1.6rem 1.1rem 1.7rem;
+  }
+
+  #contact .contact-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    align-items: start;
+  }
+
+  #contact .email-link {
+    font-size: clamp(1.1rem, 1.55vw, 1.5rem);
+    overflow-wrap: anywhere;
+  }
+
+  #contact .closing {
+    margin-top: 0.9rem;
+    padding-top: 0.8rem;
+  }
+
+  #contact .closing-title {
+    font-size: clamp(1.2rem, 1.8vw, 1.7rem);
+  }
+}
+
+@media (min-width: 960px) and (max-height: 860px) {
+  #contact .pin {
+    padding-top: calc(4.6rem + env(safe-area-inset-top));
+  }
+
+  #contact .section-title {
+    font-size: clamp(1.6rem, 2.6vw, 2.2rem);
+    margin-block: 0.15rem 0.35rem;
+  }
+
+  #contact .card p,
+  #contact .card li {
+    font-size: 0.92rem;
+    line-height: 1.45;
+  }
+
+  #contact .card :is(h3, p, ul) {
+    margin-block: 0.3rem;
+  }
+}

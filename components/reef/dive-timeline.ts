@@ -251,7 +251,7 @@ function contactIntro(tl: gsap.core.Timeline, range: Range) {
   const d = introLength(range);
   const at = range.start;
   tl.fromTo(card, { clipPath: "inset(0% 0% 100% 0% round 28px)", x: -40, skewY: 2.5 }, { clipPath: "inset(0% 0% 0% 0% round 28px)", x: 0, skewY: 0, duration: d * 1.1, ease: "power3.inOut", immediateRender: true, clearProps: "clipPath" }, at);
-  tl.fromTo([...card.children], { autoAlpha: 0, x: -22 }, { autoAlpha: 1, x: 0, duration: d * 0.55, stagger: d * 0.06, ease: "sine.out", immediateRender: true }, at + d * 0.35);
+  tl.fromTo(card.querySelectorAll(":scope > :not(.contact-grid), .contact-col"), { autoAlpha: 0, x: -22 }, { autoAlpha: 1, x: 0, duration: d * 0.55, stagger: d * 0.06, ease: "sine.out", immediateRender: true }, at + d * 0.35);
 }
 
 /** Socials drift up out of open water one by one; scrubbed, so they sink back on scroll-up. */

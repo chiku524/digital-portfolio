@@ -361,6 +361,8 @@ export default function ReefExperience() {
               <p className="kicker">{PROFILE.contactTitle}</p>
               <h2 className="section-title">{PROFILE.contactTitle}</h2>
               <p className="lede">{PROFILE.contactLede}</p>
+              <div className="contact-grid">
+              <div className="contact-col">
               <p className="badge">{PROFILE.emailBadge}</p>
               <h3>{PROFILE.emailLabel}</h3>
               <p>
@@ -369,6 +371,8 @@ export default function ReefExperience() {
                 </a>
               </p>
               <p className="muted">{PROFILE.emailNote}</p>
+              </div>
+              <div className="contact-col">
               <p className="badge">{PROFILE.introBadge}</p>
               <h3>{PROFILE.introTitle}</h3>
               <ul>
@@ -390,6 +394,8 @@ export default function ReefExperience() {
                 >
                   Back to top
                 </a>
+              </div>
+              </div>
               </div>
               <footer className="closing">
                 <p className="kicker">{PROFILE.footerBrand}</p>
