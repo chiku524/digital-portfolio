@@ -324,6 +324,7 @@ export default function ReefExperience() {
         <section id="approach" className="zone zone--scrub" style={{ ["--weight" as string]: ZONES[4].weight }}>
           <div className="pin">
             <div className="card">
+              <span className="draw-line" aria-hidden="true" />
               <p className="kicker">{PROFILE.approachTitle}</p>
               <h2 className="section-title">{PROFILE.approachTitle}</h2>
               <p className="lede">{PROFILE.approachLede}</p>

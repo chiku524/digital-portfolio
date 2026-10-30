@@ -143,14 +143,17 @@ function fadeGroup(
   range: { start: number; end: number },
   reduced: boolean,
   hold: boolean,
+  custom = false,
 ) {
   const card = document.querySelector<HTMLElement>(`#${id} .card`);
   if (!card || range.end <= range.start) return;
+  // Sections with their own intro only fade the shell in; the intro supplies the motion.
+  const lift = custom ? 0 : 26;
   const enter = reduced ? 0.0001 : Math.min(0.028, (range.end - range.start) * 0.18);
   const exit = reduced ? 0.0001 : Math.min(0.034, (range.end - range.start) * 0.2);
   if (range.start > 0.002) {
-    tl.set(card, { autoAlpha: 0, y: reduced ? 0 : 26 }, 0);
-    tl.to(card, { autoAlpha: 1, y: 0, duration: enter, ease: "power2.out" }, range.start);
+    tl.set(card, { autoAlpha: 0, y: reduced ? 0 : lift }, 0);
+    tl.to(card, { autoAlpha: 1, y: 0, duration: custom ? enter * 0.35 : enter, ease: "power2.out" }, range.start);
   }
   if (!hold) {
     const slice = Math.max((range.end - range.start) / 14, 0.0001);
@@ -160,7 +163,7 @@ function fadeGroup(
       { autoAlpha: 0, y: reduced ? 0 : -30, duration: leave, ease: "power2.in" },
       Math.max(range.start, range.end - leave),
     );
-  } else if (range.start > 0.002) {
+  } else if (range.start > 0.002 && !custom) {
     tl.fromTo(
       [...card.children],
       { autoAlpha: 0, y: reduced ? 0 : 16 },
@@ -175,6 +178,80 @@ function fadeGroup(
       range.start,
     );
   }
+}
+
+type Range = { start: number; end: number };
+
+const introLength = (range: Range) => Math.min(0.03, (range.end - range.start) * 0.2);
+
+function masked(el: Element | null, type: "lines" | "words" | "chars", splits: Split[]) {
+  if (!el) return [] as Element[];
+  const split = SplitText.create(el, { type, mask: type === "chars" ? undefined : type });
+  splits.push(split);
+  return type === "lines" ? split.lines : type === "words" ? split.words : split.chars;
+}
+
+/** About: a tide-line. The headline rises line by line out of a mask, the kicker
+ * tightens in from wide tracking, prose surfaces from a blur, values settle last. */
+function aboutIntro(tl: gsap.core.Timeline, range: Range, splits: Split[]) {
+  const card = document.querySelector("#about .card");
+  if (!card) return;
+  const d = introLength(range);
+  const at = range.start;
+  const lines = masked(card.querySelector(".section-title"), "lines", splits);
+  tl.fromTo(card.querySelector(".kicker"), { autoAlpha: 0, letterSpacing: "0.7em" }, { autoAlpha: 1, letterSpacing: "0.18em", duration: d, ease: "power3.out", immediateRender: true, clearProps: "letterSpacing" }, at);
+  tl.fromTo(lines, { yPercent: 115, rotate: 3 }, { yPercent: 0, rotate: 0, duration: d * 0.9, stagger: d * 0.15, ease: "expo.out", immediateRender: true }, at + d * 0.08);
+  tl.fromTo(card.querySelectorAll(":scope > p:not(.kicker)"), { autoAlpha: 0, y: 12, filter: "blur(6px)" }, { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: d * 0.8, stagger: d * 0.18, ease: "power2.out", immediateRender: true, clearProps: "filter" }, at + d * 0.3);
+  tl.fromTo(card.querySelectorAll(":scope > .chips .chip"), { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: d * 0.5, stagger: d * 0.06, ease: "power2.out", immediateRender: true }, at + d * 0.75);
+}
+
+/** Skills: bubbles. Title letters float up from random depths, the beat ticks pop
+ * like rising bubbles with an elastic wobble, and the toolkit chips do the same. */
+function skillsIntro(tl: gsap.core.Timeline, range: Range, splits: Split[]) {
+  const card = document.querySelector("#skills .card");
+  if (!card) return;
+  const d = introLength(range);
+  const at = range.start;
+  tl.fromTo(card, { scale: 0.94, transformOrigin: "50% 100%" }, { scale: 1, duration: d, ease: "back.out(1.6)", immediateRender: true }, at);
+  const chars = masked(card.querySelector(".section-title"), "chars", splits);
+  tl.fromTo(chars, { autoAlpha: 0, y: 34, scale: 0.4 }, { autoAlpha: 1, y: 0, scale: 1, duration: d * 0.7, stagger: { each: d * 0.035, from: "random" }, ease: "back.out(2.4)", immediateRender: true }, at + d * 0.05);
+  tl.fromTo(card.querySelectorAll(":scope > .kicker, :scope > .lede"), { autoAlpha: 0, y: 14 }, { autoAlpha: 1, y: 0, duration: d * 0.6, stagger: d * 0.12, ease: "power2.out", immediateRender: true }, at + d * 0.2);
+  tl.fromTo(card.querySelectorAll(".ticks .tick"), { autoAlpha: 0, y: 26, scale: 0 }, { autoAlpha: 1, y: 0, scale: 1, duration: d * 0.8, stagger: d * 0.09, ease: "elastic.out(1, 0.5)", immediateRender: true }, at + d * 0.45);
+}
+
+/** Toolkit chips bubble up with an elastic pop when the toolkit beat arrives. */
+function toolkitChips(tl: gsap.core.Timeline, range: Range, count: number) {
+  const chips = document.querySelectorAll("#skills .beat:last-child .chip");
+  if (!chips.length || count <= 0) return;
+  const slice = (range.end - range.start) / count;
+  const at = range.start + slice * (count - 1);
+  tl.fromTo(chips, { autoAlpha: 0, y: 22, scale: 0.3 }, { autoAlpha: 1, y: 0, scale: 1, duration: slice * 0.4, stagger: { each: slice * 0.02, from: "random" }, ease: "elastic.out(1, 0.55)", immediateRender: false }, at + slice * 0.05);
+}
+
+/** Approach: a current-line draws down the card's edge, the title is wiped in
+ * left to right, and the numbered steps line up along the line one after another. */
+function approachIntro(tl: gsap.core.Timeline, range: Range, splits: Split[]) {
+  const card = document.querySelector("#approach .card");
+  if (!card) return;
+  const d = introLength(range);
+  const at = range.start;
+  tl.fromTo(card.querySelector(".draw-line"), { scaleY: 0 }, { scaleY: 1, duration: d * 1.1, ease: "power2.inOut", immediateRender: true }, at);
+  tl.fromTo(card.querySelector(".kicker"), { autoAlpha: 0, x: -16 }, { autoAlpha: 1, x: 0, duration: d * 0.5, ease: "power2.out", immediateRender: true }, at + d * 0.1);
+  const words = masked(card.querySelector(".section-title"), "words", splits);
+  tl.fromTo(words, { clipPath: "inset(0 100% 0 0)", x: -12 }, { clipPath: "inset(0 0% 0 0)", x: 0, duration: d * 0.7, stagger: d * 0.12, ease: "power3.inOut", immediateRender: true }, at + d * 0.2);
+  tl.fromTo(card.querySelector(".lede"), { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: d * 0.8, ease: "power2.inOut", immediateRender: true, clearProps: "clipPath" }, at + d * 0.4);
+  tl.fromTo(card.querySelectorAll(".ticks .tick"), { autoAlpha: 0, x: -28, rotate: -90 }, { autoAlpha: 1, x: 0, rotate: 0, duration: d * 0.6, stagger: d * 0.14, ease: "power3.out", immediateRender: true }, at + d * 0.55);
+}
+
+/** Contact: a curtain of current. The panel unfurls top-down with a gentle sway,
+ * then its contents settle in from the side. */
+function contactIntro(tl: gsap.core.Timeline, range: Range) {
+  const card = document.querySelector<HTMLElement>("#contact .card");
+  if (!card) return;
+  const d = introLength(range);
+  const at = range.start;
+  tl.fromTo(card, { clipPath: "inset(0% 0% 100% 0% round 28px)", x: -40, skewY: 2.5 }, { clipPath: "inset(0% 0% 0% 0% round 28px)", x: 0, skewY: 0, duration: d * 1.1, ease: "power3.inOut", immediateRender: true, clearProps: "clipPath" }, at);
+  tl.fromTo([...card.children], { autoAlpha: 0, x: -22 }, { autoAlpha: 1, x: 0, duration: d * 0.55, stagger: d * 0.06, ease: "sine.out", immediateRender: true }, at + d * 0.35);
 }
 
 /** Socials drift up out of open water one by one; scrubbed, so they sink back on scroll-up. */
@@ -276,26 +353,26 @@ export function mountDiveTimeline(options: {
         tl.to(surface, { autoAlpha: 0, y: reduced ? 0 : -24, duration: exit, ease: "power2.in" }, Math.max(0, spans.top.end - exit));
       }
 
-      fadeGroup(tl, "about", spans.about, reduced, false);
-      if (!reduced) {
-        tl.fromTo(
-          "#about .card > *",
-          { autoAlpha: 0, y: 16 },
-          { autoAlpha: 1, y: 0, duration: 0.02, stagger: 0.004, ease: "power3.out", immediateRender: false },
-          spans.about.start + 0.004,
-        );
-      }
+      const custom = !reduced;
+      fadeGroup(tl, "about", spans.about, reduced, false, custom);
+      if (custom) aboutIntro(tl, spans.about, splits);
 
       scatterSequence(tl, spans.work, reduced);
       fadeField(tl, spans.work, reduced);
 
-      fadeGroup(tl, "skills", spans.skills, reduced, false);
+      fadeGroup(tl, "skills", spans.skills, reduced, false, custom);
       soloSequence(tl, "skills", SKILL_BEATS, spans.skills, reduced, splits);
+      if (custom) {
+        skillsIntro(tl, spans.skills, splits);
+        toolkitChips(tl, spans.skills, SKILL_BEATS);
+      }
 
-      fadeGroup(tl, "approach", spans.approach, reduced, false);
+      fadeGroup(tl, "approach", spans.approach, reduced, false, custom);
       soloSequence(tl, "approach", APPROACH.length, spans.approach, reduced, splits);
+      if (custom) approachIntro(tl, spans.approach, splits);
 
-      fadeGroup(tl, "contact", spans.contact, reduced, true);
+      fadeGroup(tl, "contact", spans.contact, reduced, true, custom);
+      if (custom) contactIntro(tl, spans.contact);
       socialRail(tl, spans.contact, reduced);
     });
 
