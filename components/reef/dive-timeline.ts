@@ -370,14 +370,26 @@ export function mountDiveTimeline(options: {
       contact: zoneSpan("contact", max),
     };
 
+    // Visual ranges: fades run half a screen past each pinned span, while the section is
+    // still rising in or scrolling out, so one section's exit meets the next one's entrance.
+    const pad = (window.innerHeight * 0.5) / max;
+    const widen = (range: Range) => ({ start: Math.max(0, range.start - pad), end: Math.min(1, range.end + pad) });
+    const vis = {
+      top: { start: 0, end: Math.min(1, spans.top.end + pad) },
+      about: widen(spans.about),
+      work: widen(spans.work),
+      skills: widen(spans.skills),
+      approach: { start: Math.max(0, spans.approach.start - pad), end: Math.min(spans.contact.start + pad * 0.5, spans.approach.end + pad) },
+    };
+
     // Fully-visible windows in px, for the gentle snap in smooth.ts.
     const px = (t: number) => t * max;
     reefScroll.holds = [
-      { id: "top", start: 0, end: px(spans.top.end - edgeOut(spans.top)) },
-      { id: "about", start: px(spans.about.start + edgeIn(spans.about)), end: px(spans.about.end - edgeOut(spans.about)) },
-      { id: "work", start: px(spans.work.start + (spans.work.end - spans.work.start) * 0.2), end: px(spans.work.end - workExit(spans.work)) },
-      { id: "skills", start: px(spans.skills.start + edgeIn(spans.skills)), end: px(spans.skills.end - edgeOut(spans.skills, SKILL_BEATS)) },
-      { id: "approach", start: px(spans.approach.start + edgeIn(spans.approach)), end: px(spans.approach.end - edgeOut(spans.approach, APPROACH.length)) },
+      { id: "top", start: 0, end: px(vis.top.end - edgeOut(vis.top)) },
+      { id: "about", start: px(vis.about.start + edgeIn(vis.about)), end: px(vis.about.end - edgeOut(vis.about)) },
+      { id: "work", start: px(vis.work.start + (vis.work.end - vis.work.start) * 0.2), end: px(vis.work.end - workExit(vis.work)) },
+      { id: "skills", start: px(vis.skills.start + edgeIn(vis.skills)), end: px(vis.skills.end - edgeOut(vis.skills, SKILL_BEATS)) },
+      { id: "approach", start: px(vis.approach.start + edgeIn(vis.approach)), end: px(vis.approach.end - edgeOut(vis.approach, APPROACH.length)) },
       { id: "contact", start: px(spans.contact.start + edgeIn(spans.contact)), end: max },
     ];
 
@@ -406,27 +418,27 @@ export function mountDiveTimeline(options: {
 
       const surface = document.querySelector("#top .card");
       if (surface) {
-        const exit = reduced ? 0.0001 : edgeOut(spans.top);
-        tl.to(surface, { autoAlpha: 0, y: reduced ? 0 : -24, duration: exit, ease: "power2.in" }, Math.max(0, spans.top.end - exit));
+        const exit = reduced ? 0.0001 : edgeOut(vis.top);
+        tl.to(surface, { autoAlpha: 0, y: reduced ? 0 : -24, duration: exit, ease: "power2.in" }, Math.max(0, vis.top.end - exit));
       }
 
       const custom = !reduced;
-      fadeGroup(tl, "about", spans.about, reduced, false, custom);
-      if (custom) aboutIntro(tl, spans.about, splits);
+      fadeGroup(tl, "about", vis.about, reduced, false, custom);
+      if (custom) aboutIntro(tl, vis.about, splits);
 
-      scatterSequence(tl, spans.work, reduced);
-      fadeField(tl, spans.work, reduced);
+      scatterSequence(tl, vis.work, reduced);
+      fadeField(tl, vis.work, reduced);
 
-      fadeGroup(tl, "skills", spans.skills, reduced, false, custom, SKILL_BEATS);
+      fadeGroup(tl, "skills", vis.skills, reduced, false, custom, SKILL_BEATS);
       soloSequence(tl, "skills", SKILL_BEATS, spans.skills, reduced, splits);
       if (custom) {
-        skillsIntro(tl, spans.skills, splits);
+        skillsIntro(tl, vis.skills, splits);
         toolkitChips(tl, spans.skills, SKILL_BEATS);
       }
 
-      fadeGroup(tl, "approach", spans.approach, reduced, false, custom, APPROACH.length);
+      fadeGroup(tl, "approach", vis.approach, reduced, false, custom, APPROACH.length);
       soloSequence(tl, "approach", APPROACH.length, spans.approach, reduced, splits);
-      if (custom) approachIntro(tl, spans.approach, splits);
+      if (custom) approachIntro(tl, vis.approach, splits);
 
       fadeGroup(tl, "contact", spans.contact, reduced, true, custom);
       if (custom) contactIntro(tl, spans.contact);
