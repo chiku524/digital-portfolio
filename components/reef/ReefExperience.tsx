@@ -20,7 +20,7 @@ import { mountSmoothScroll } from "./smooth";
 import { mountInteractions } from "./interactions";
 import { reefScroll, scrollToBeat, scrollToId } from "./scroll";
 import { detectTier, type PerfTier } from "./perf";
-import { trackPointer } from "./ambient";
+import { playSectionCue, trackPointer } from "./ambient";
 import AmbientControls from "./AmbientControls";
 import ContactForm from "./ContactForm";
 import CaseStudy, { projectSlug } from "./CaseStudy";
@@ -65,6 +65,13 @@ export default function ReefExperience({ hasResume = false }: { hasResume?: bool
   const [skillIndex, setSkillIndex] = useState(0);
   const [approachIndex, setApproachIndex] = useState(0);
   const [year, setYear] = useState("2026");
+  const cueZone = useRef<string | null>(null);
+
+  // Soft chime/bubble cue when a new section is entered (no-op unless ocean sound is on).
+  useEffect(() => {
+    if (cueZone.current !== null && cueZone.current !== active) playSectionCue(active);
+    cueZone.current = active;
+  }, [active]);
 
   useEffect(() => {
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");

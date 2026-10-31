@@ -92,6 +92,66 @@ export function trackPointer() {
 
 type Ocean = { ctx: AudioContext; master: GainNode };
 let ocean: Ocean | null = null;
+let oceanOn = false;
+let lastCue = 0;
+
+// Pentatonic-ish pitch per zone so each section has its own soft "ping".
+const CUE_PITCH: Record<string, number> = {
+  top: 659.25,
+  about: 587.33,
+  work: 523.25,
+  skills: 440,
+  approach: 392,
+  contact: 523.25,
+};
+
+/**
+ * Very soft section cue: a glassy chime plus a few rising bubble blips.
+ * Only plays while the ocean sound is on (reuses its AudioContext).
+ */
+export function playSectionCue(zone: string) {
+  if (!ocean || !oceanOn || ocean.ctx.state !== "running") return;
+  const { ctx } = ocean;
+  const nowMs = performance.now();
+  if (nowMs - lastCue < 700) return;
+  lastCue = nowMs;
+  const t = ctx.currentTime + 0.02;
+  const out = ctx.createGain();
+  out.gain.value = 0.9;
+  out.connect(ctx.destination);
+
+  const base = CUE_PITCH[zone] ?? 523.25;
+  [1, 2.01, 3.98].forEach((mult, i) => {
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = base * mult;
+    const g = ctx.createGain();
+    const peak = [0.028, 0.012, 0.005][i];
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(peak, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.6 - i * 0.35);
+    osc.connect(g).connect(out);
+    osc.start(t);
+    osc.stop(t + 1.7);
+  });
+
+  for (let i = 0; i < 3; i += 1) {
+    const start = t + 0.08 + i * (0.07 + Math.random() * 0.08);
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    const f = 380 + Math.random() * 420;
+    osc.frequency.setValueAtTime(f, start);
+    osc.frequency.exponentialRampToValueAtTime(f * 2.4, start + 0.07);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, start);
+    g.gain.linearRampToValueAtTime(0.014, start + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + 0.09);
+    osc.connect(g).connect(out);
+    osc.start(start);
+    osc.stop(start + 0.12);
+  }
+  window.setTimeout(() => out.disconnect(), 2200);
+}
 
 /** Procedural surf: looped brown noise through a swelling low-pass, no assets. */
 function buildOcean(): Ocean {
@@ -144,6 +204,7 @@ export async function setOceanSound(on: boolean) {
     if (!on) return false;
     ocean = buildOcean();
   }
+  oceanOn = on;
   const { ctx, master } = ocean;
   const now = ctx.currentTime;
   master.gain.cancelScheduledValues(now);
@@ -164,4 +225,5 @@ export function disposeOcean() {
   if (!ocean) return;
   void ocean.ctx.close();
   ocean = null;
+  oceanOn = false;
 }
