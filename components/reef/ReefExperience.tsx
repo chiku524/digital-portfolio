@@ -175,6 +175,14 @@ export default function ReefExperience() {
       >
         <span ref={bar} />
       </div>
+      <span id="new-tab-note" hidden>
+        Opens in a new tab
+      </span>
+      {/* Painted ocean shown under the canvas, and on its own when WebGL is unavailable. */}
+      <div className={webgl ? "reef-fallback" : "reef-fallback is-static"} aria-hidden="true">
+        <span className="reef-fallback-rays" />
+        <span className="reef-fallback-floor" />
+      </div>
       <div className="reef-vignette" aria-hidden="true" />
       {ready && webgl && tier ? (
         <ReefCanvas key={`${mobile ? "mobile" : "desktop"}-${tier}`} mobile={mobile} reduced={reduced} tier={tier} onReady={sceneGate.resolve} />
@@ -184,6 +192,7 @@ export default function ReefExperience() {
           <a
             className="brand"
             href="#top"
+            aria-label={`${PROFILE.brand}, back to top`}
             onClick={(event) => {
               event.preventDefault();
               scrollToId("top");
@@ -192,7 +201,7 @@ export default function ReefExperience() {
             <span className="brand-name">{PROFILE.brand}</span>
             <span className="brand-tag">{PROFILE.navTagline}</span>
           </a>
-          <nav className="nav-links" aria-label="Sections">
+          <nav className="nav-links" aria-label="Primary">
             {ZONES.filter((zone) => zone.nav).map((zone) => (
               <a
                 key={zone.id}
@@ -207,11 +216,11 @@ export default function ReefExperience() {
               </a>
             ))}
           </nav>
-          <a className="nav-book" href={PROFILE.calendly} target="_blank" rel="noreferrer">
+          <a className="nav-book" href={PROFILE.calendly} target="_blank" aria-describedby="new-tab-note" rel="noreferrer">
             Book a call
           </a>
         </div>
-        <p className="depth-readout">
+        <p className="depth-readout" aria-live="polite">
           {readout}
         </p>
       </header>
@@ -235,7 +244,7 @@ export default function ReefExperience() {
                 >
                   View selected work
                 </a>
-                <a className="button button--ghost" href={PROFILE.calendly} target="_blank" rel="noreferrer">
+                <a className="button button--ghost" href={PROFILE.calendly} target="_blank" aria-describedby="new-tab-note" rel="noreferrer">
                   Book a call
                 </a>
               </div>
@@ -288,7 +297,7 @@ export default function ReefExperience() {
                         key={link.href}
                         className="text-link"
                         href={link.href}
-                        target="_blank"
+                        target="_blank" aria-describedby="new-tab-note"
                         rel="noreferrer"
                         aria-label={`${link.label}: ${project.name}`}
                       >
@@ -330,7 +339,7 @@ export default function ReefExperience() {
                   </div>
                   <p>{PROFILE.toolkitNote}</p>
                   <p>
-                    <a className="text-link" href={PROFILE.github} target="_blank" rel="noreferrer">
+                    <a className="text-link" href={PROFILE.github} target="_blank" aria-describedby="new-tab-note" rel="noreferrer">
                       {PROFILE.githubActivity} <span aria-hidden="true">↗</span>
                     </a>
                   </p>
@@ -414,7 +423,7 @@ export default function ReefExperience() {
                 ))}
               </ul>
               <div className="actions">
-                <a className="button button--primary" href={PROFILE.calendly} target="_blank" rel="noreferrer">
+                <a className="button button--primary" href={PROFILE.calendly} target="_blank" aria-describedby="new-tab-note" rel="noreferrer">
                   Schedule a call
                 </a>
                 <a
@@ -443,7 +452,7 @@ export default function ReefExperience() {
                 <h3 className="social-rail-title">{PROFILE.socialTitle}</h3>
                 <div className="socials">
                   {SOCIALS.map((social) => (
-                    <a key={social.label} className="social" href={social.href} target="_blank" rel="noreferrer">
+                    <a key={social.label} className="social" href={social.href} target="_blank" aria-describedby="new-tab-note" rel="noreferrer">
                       <strong>
                         {social.label} · {social.handle}
                       </strong>
