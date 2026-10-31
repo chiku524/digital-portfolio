@@ -109,8 +109,6 @@ export default function ReefExperience({ hasResume = false }: { hasResume?: bool
     if (!ready) return;
     const unsmooth = mountSmoothScroll(reduced);
     const untrack = trackPointer();
-    const hash = window.location.hash.replace("#", "");
-    if (ZONES.some((zone) => zone.id === hash)) scrollToId(hash);
     const unmount = mountDiveTimeline({
       bar: bar.current,
       progressbar: progress.current,
@@ -121,6 +119,9 @@ export default function ReefExperience({ hasResume = false }: { hasResume?: bool
         setApproachIndex((prev) => (prev === scene.approach ? prev : scene.approach));
       },
     });
+    // After the timeline has measured each section's hold, so deep links land fully visible.
+    const hash = window.location.hash.replace("#", "");
+    if (ZONES.some((zone) => zone.id === hash)) scrollToId(hash);
     return () => {
       unmount();
       unsmooth();

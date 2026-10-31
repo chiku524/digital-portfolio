@@ -18,6 +18,8 @@ type Scene = {
 
 type Split = { revert: () => void };
 
+type Range = { start: number; end: number };
+
 function zoneSpan(id: string, max: number) {
   const el = document.getElementById(id);
   if (!el || max <= 0) return { start: 0, end: 0 };
@@ -75,10 +77,10 @@ function scatterSequence(
   // to its CSS position. Offsets ignore transforms, so rebuilds stay accurate.
   const cx = field.clientWidth / 2;
   const cy = field.clientHeight / 2;
-  const appear = span * 0.08;
-  const travelStart = range.start + span * 0.11;
-  const travel = span * 0.2;
-  const stagger = (span * 0.14) / Math.max(count - 1, 1);
+  const appear = span * 0.05;
+  const travelStart = range.start + span * 0.06;
+  const travel = span * 0.09;
+  const stagger = (span * 0.05) / Math.max(count - 1, 1);
   const settled = travelStart + travel + stagger * (count - 1);
 
   nodes.forEach((article, index) => {
@@ -104,6 +106,13 @@ function scatterSequence(
   tl.set(nodes, { zIndex: "", pointerEvents: "auto" }, settled);
 }
 
+/** Section edges: ~20% entrance, ~60% fully visible hold, ~20% exit. */
+const EDGE = 0.2;
+const edgeIn = (range: Range) => Math.min(0.04, (range.end - range.start) * EDGE);
+const edgeOut = (range: Range, beats = 1) =>
+  Math.min(0.04, (range.end - range.start) * EDGE, ((range.end - range.start) / Math.max(beats, 1)) * 0.6);
+const workExit = (range: Range) => Math.min(0.05, (range.end - range.start) * 0.12);
+
 function fadeField(
   tl: gsap.core.Timeline,
   range: { start: number; end: number },
@@ -111,7 +120,7 @@ function fadeField(
 ) {
   const field = document.querySelector<HTMLElement>("#work .work-field");
   if (!field || range.end <= range.start) return;
-  const leave = reduced ? 0.0001 : Math.min(0.05, (range.end - range.start) * 0.14);
+  const leave = reduced ? 0.0001 : workExit(range);
   tl.fromTo(
     field,
     { autoAlpha: 1 },
@@ -183,20 +192,20 @@ function fadeGroup(
   reduced: boolean,
   hold: boolean,
   custom = false,
+  beats = 1,
 ) {
   const card = document.querySelector<HTMLElement>(`#${id} .card`);
   if (!card || range.end <= range.start) return;
   // Sections with their own intro only fade the shell in; the intro supplies the motion.
   const lift = custom ? 0 : 26;
-  const enter = reduced ? 0.0001 : Math.min(0.028, (range.end - range.start) * 0.18);
-  const exit = reduced ? 0.0001 : Math.min(0.034, (range.end - range.start) * 0.2);
+  const enter = reduced ? 0.0001 : edgeIn(range);
+  const exit = reduced ? 0.0001 : edgeOut(range, beats);
   if (range.start > 0.002) {
     tl.set(card, { autoAlpha: 0, y: reduced ? 0 : lift }, 0);
     tl.to(card, { autoAlpha: 1, y: 0, duration: custom ? enter * 0.35 : enter, ease: "power2.out" }, range.start);
   }
   if (!hold) {
-    const slice = Math.max((range.end - range.start) / 14, 0.0001);
-    const leave = reduced ? 0.0001 : Math.min(exit, slice * 0.4);
+    const leave = exit;
     tl.to(
       card,
       { autoAlpha: 0, y: reduced ? 0 : -30, duration: leave, ease: "power2.in" },
@@ -219,9 +228,7 @@ function fadeGroup(
   }
 }
 
-type Range = { start: number; end: number };
-
-const introLength = (range: Range) => Math.min(0.03, (range.end - range.start) * 0.2);
+const introLength = (range: Range) => Math.min(0.04, (range.end - range.start) * 0.2);
 
 function masked(el: Element | null, type: "lines" | "words" | "chars", splits: Split[]) {
   if (!el) return [] as Element[];
@@ -363,6 +370,17 @@ export function mountDiveTimeline(options: {
       contact: zoneSpan("contact", max),
     };
 
+    // Fully-visible windows in px, for the gentle snap in smooth.ts.
+    const px = (t: number) => t * max;
+    reefScroll.holds = [
+      { id: "top", start: 0, end: px(spans.top.end - edgeOut(spans.top)) },
+      { id: "about", start: px(spans.about.start + edgeIn(spans.about)), end: px(spans.about.end - edgeOut(spans.about)) },
+      { id: "work", start: px(spans.work.start + (spans.work.end - spans.work.start) * 0.2), end: px(spans.work.end - workExit(spans.work)) },
+      { id: "skills", start: px(spans.skills.start + edgeIn(spans.skills)), end: px(spans.skills.end - edgeOut(spans.skills, SKILL_BEATS)) },
+      { id: "approach", start: px(spans.approach.start + edgeIn(spans.approach)), end: px(spans.approach.end - edgeOut(spans.approach, APPROACH.length)) },
+      { id: "contact", start: px(spans.contact.start + edgeIn(spans.contact)), end: max },
+    ];
+
     ctx = gsap.context(() => {
       const tl = gsap.timeline({
         defaults: { ease: "none" },
@@ -388,7 +406,7 @@ export function mountDiveTimeline(options: {
 
       const surface = document.querySelector("#top .card");
       if (surface) {
-        const exit = reduced ? 0.0001 : Math.min(0.03, (spans.top.end - spans.top.start) * 0.28);
+        const exit = reduced ? 0.0001 : edgeOut(spans.top);
         tl.to(surface, { autoAlpha: 0, y: reduced ? 0 : -24, duration: exit, ease: "power2.in" }, Math.max(0, spans.top.end - exit));
       }
 
@@ -399,14 +417,14 @@ export function mountDiveTimeline(options: {
       scatterSequence(tl, spans.work, reduced);
       fadeField(tl, spans.work, reduced);
 
-      fadeGroup(tl, "skills", spans.skills, reduced, false, custom);
+      fadeGroup(tl, "skills", spans.skills, reduced, false, custom, SKILL_BEATS);
       soloSequence(tl, "skills", SKILL_BEATS, spans.skills, reduced, splits);
       if (custom) {
         skillsIntro(tl, spans.skills, splits);
         toolkitChips(tl, spans.skills, SKILL_BEATS);
       }
 
-      fadeGroup(tl, "approach", spans.approach, reduced, false, custom);
+      fadeGroup(tl, "approach", spans.approach, reduced, false, custom, APPROACH.length);
       soloSequence(tl, "approach", APPROACH.length, spans.approach, reduced, splits);
       if (custom) approachIntro(tl, spans.approach, splits);
 

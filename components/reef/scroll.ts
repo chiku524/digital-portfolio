@@ -21,6 +21,8 @@ export const reefScroll = {
   mobile: false,
   reducedMotion: false,
   ranges: [] as ZoneRange[],
+  /** Fully-visible scroll windows (px) per section, used by the gentle snap. */
+  holds: [] as { id: string; start: number; end: number }[],
 };
 
 export function clamp(value: number, min: number, max: number) {
@@ -78,7 +80,9 @@ export function scrollToId(id: string) {
   const el = document.getElementById(id);
   if (!el) return;
   const top = el.getBoundingClientRect().top + window.scrollY;
-  scrollToY(top);
+  // Land inside the fully-visible hold rather than at the fade-in edge.
+  const hold = reefScroll.holds.find((entry) => entry.id === id);
+  scrollToY(hold ? Math.min(Math.max(top, hold.start), Math.max(top, hold.end)) : top);
 }
 
 export function scrollToBeat(id: string, index: number, count: number) {
