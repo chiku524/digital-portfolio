@@ -425,7 +425,6 @@ function CameraRig({ mobile }: { mobile: boolean }) {
       else fogColor.lerp(daySky, 0.12);
       fogNode.color.copy(fogColor);
       gl.setClearColor(fogColor);
-      (window as unknown as { __reefTide?: object }).__reefTide = { night: n, fog: fogColor.getHexString(), uNight: uNight.value };
     }
   });
 

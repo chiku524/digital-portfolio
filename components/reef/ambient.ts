@@ -11,8 +11,6 @@ export const reefEnv = {
   pointer: null as null | { x: number; y: number },
 };
 
-if (typeof window !== "undefined") (window as unknown as { __reefEnv?: object }).__reefEnv = reefEnv;
-
 /** Shared shader uniform: every night-aware material reads this same object. */
 export const uNight = { value: 0 };
 
