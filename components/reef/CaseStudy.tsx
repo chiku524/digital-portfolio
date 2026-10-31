@@ -6,7 +6,6 @@ import gsap from "gsap";
 import { Flip } from "gsap/Flip";
 import { PROJECTS, type Project } from "@/content/portfolio";
 import { getLenis } from "./smooth";
-import { trackEvent } from "@/lib/track";
 
 gsap.registerPlugin(Flip);
 
@@ -39,7 +38,6 @@ export default function CaseStudy({ reduced }: { reduced: boolean }) {
     url.searchParams.set("project", projectSlug(PROJECTS[i]));
     window.history.pushState({ caseStudy: true }, "", url);
     pushed.current = true;
-    trackEvent("case_study_open", { project: PROJECTS[i].name });
     setIndex(i);
   }, [reduced]);
 
@@ -182,10 +180,6 @@ export default function CaseStudy({ reduced }: { reduced: boolean }) {
                 target="_blank"
                 rel="noreferrer"
                 aria-describedby="new-tab-note"
-                data-track="project_click"
-                data-track-project={project.name}
-                data-track-link={link.label}
-                data-track-from="case_study"
               >
                 {link.label} <span aria-hidden="true">↗</span>
               </a>
