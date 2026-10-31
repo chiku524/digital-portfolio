@@ -22,6 +22,7 @@ import { reefScroll, scrollToBeat, scrollToId } from "./scroll";
 import { detectTier, type PerfTier } from "./perf";
 import { trackPointer } from "./ambient";
 import AmbientControls from "./AmbientControls";
+import ContactForm from "./ContactForm";
 import "./reef.css";
 
 const ReefCanvas = dynamic(() => import("./ReefCanvas"), {
@@ -426,6 +427,7 @@ export default function ReefExperience({ hasResume = false }: { hasResume?: bool
                 </a>
               </p>
               <p className="muted">{PROFILE.emailNote}</p>
+              <ContactForm email={PROFILE.email} />
               </div>
               <div className="contact-col">
               <p className="badge">{PROFILE.introBadge}</p>
