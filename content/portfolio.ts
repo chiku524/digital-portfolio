@@ -9,6 +9,12 @@ export type Project = {
   description: string;
   highlight: string;
   links: ProjectLink[];
+  /** Optional case-study extras (rendered only when present). */
+  slug?: string;
+  role?: string;
+  year?: string;
+  stack?: string[];
+  outcomes?: string[];
 };
 
 export type SkillGroup = {

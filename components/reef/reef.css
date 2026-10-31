@@ -898,7 +898,8 @@
 /* GSAP redesign layer: intro veil, pointer aura, refined glass + type */
 /* ------------------------------------------------------------------ */
 
-.reef {
+.reef,
+.case-layer {
   --ink: #f4fffb;
   --ink-soft: #cfe9e3;
   --coral: #ff7a59;
@@ -1736,4 +1737,59 @@ html[data-tide="night"] .reef-fallback {
   .contact-form-row { grid-template-columns: 1fr 1fr; }
   #contact .contact-col > p.muted { display: none; }
   .contact-form .button { padding: 0.4rem 0.9rem; min-height: 2.3rem; }
+}
+/* Case-study dialog */
+.case-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+  background: rgba(2, 10, 14, 0.62);
+  backdrop-filter: blur(6px);
+}
+.case-panel {
+  position: relative;
+  width: min(46rem, 100%);
+  max-height: min(88vh, 100%);
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-radius: 1.2rem;
+  padding: clamp(1.1rem, 3vw, 2rem);
+  color: var(--ink, #f4fffb);
+  background: linear-gradient(160deg, rgba(10, 34, 44, 0.94), rgba(4, 18, 26, 0.96));
+  border: 1px solid rgba(126, 243, 225, 0.22);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+}
+.case-close {
+  position: sticky;
+  top: 0;
+  float: right;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(207, 233, 227, 0.3);
+  background: rgba(4, 20, 28, 0.7);
+  color: inherit;
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+.case-close:focus-visible,
+.case-open:focus-visible { outline: 2px solid #7ef3e1; outline-offset: 2px; }
+.case-title { font-size: clamp(1.7rem, 4vw, 2.6rem); margin: 0.2rem 0 0.5rem; line-height: 1.05; }
+.case-lede { font-size: clamp(1rem, 1.6vw, 1.15rem); line-height: 1.55; }
+.case-section h3 { margin: 1rem 0 0.3rem; font-size: 1rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft, #cfe9e3); }
+.case-links, .case-nav { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.2rem; }
+.case-nav { padding-top: 1rem; border-top: 1px solid rgba(207, 233, 227, 0.14); justify-content: space-between; }
+.case-nav .button { min-height: 44px; }
+.case-open {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+@media (prefers-reduced-motion: reduce) {
+  .case-layer { backdrop-filter: none; }
 }

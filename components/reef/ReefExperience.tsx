@@ -23,6 +23,7 @@ import { detectTier, type PerfTier } from "./perf";
 import { trackPointer } from "./ambient";
 import AmbientControls from "./AmbientControls";
 import ContactForm from "./ContactForm";
+import CaseStudy, { projectSlug } from "./CaseStudy";
 import "./reef.css";
 
 const ReefCanvas = dynamic(() => import("./ReefCanvas"), {
@@ -297,12 +298,15 @@ export default function ReefExperience({ hasResume = false }: { hasResume?: bool
             <div className="work-field">
               <h2 className="sr-only">{PROFILE.workTitle}</h2>
               {PROJECTS.map((project) => (
-                <article key={project.name} className="project-block">
+                <article key={project.name} className="project-block" data-flip-id={`project-${projectSlug(project)}`}>
                   <p className="badge">{project.badge}</p>
                   <h3>{project.name}</h3>
                   <p className="project-copy">{project.description}</p>
                   <p className="muted project-note">{project.highlight}</p>
                   <div className="project-links">
+                    <button type="button" className="text-link case-open" data-case={projectSlug(project)} aria-haspopup="dialog">
+                      Case study <span aria-hidden="true">→</span>
+                    </button>
                     {project.links.map((link) => (
                       <a
                         key={link.href}
@@ -484,6 +488,7 @@ export default function ReefExperience({ hasResume = false }: { hasResume?: bool
           </div>
         </section>
       </main>
+      <CaseStudy reduced={reduced} />
     </div>
   );
 }
