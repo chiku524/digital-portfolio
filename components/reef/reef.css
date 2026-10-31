@@ -1409,3 +1409,66 @@ html.lenis body {
     gap: 0.4rem;
   }
 }
+
+/* Touch: every tap target gets at least a 44px hit area without changing the visual layout. */
+@media (pointer: coarse), (max-width: 800px) {
+  .nav-links a,
+  .brand {
+    min-height: 44px;
+    min-width: 44px;
+    align-items: center;
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .text-link,
+  .email-link,
+  .tick,
+  .skip-link {
+    position: relative;
+  }
+
+  .skip-link {
+    position: absolute;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .text-link::before,
+  .email-link::before,
+  .tick::before {
+    content: "";
+    position: absolute;
+    inset: -13px -3px;
+    min-width: 44px;
+  }
+
+  .tick::before {
+    inset: -3px -2px;
+  }
+
+  .button,
+  .tick,
+  .social {
+    min-height: 44px;
+  }
+
+  .card,
+  .social-rail {
+    touch-action: pan-y;
+  }
+}
+
+@media (max-width: 959px) {
+  #contact .pin {
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom));
+  }
+
+  #contact .card,
+  #contact .social-rail {
+    width: min(40rem, 100%);
+    align-self: center;
+  }
+}
