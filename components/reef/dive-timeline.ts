@@ -1,7 +1,7 @@
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
-import { APPROACH, PROJECTS, SKILLS } from "@/content/portfolio";
+import { APPROACH, SKILLS, WORK_GROUPS, WORK_GROUP_SIZE } from "@/content/portfolio";
 import { beatIndex, reefScroll, zoneAt, type ZoneRange } from "./scroll";
 
 gsap.registerPlugin(ScrollTrigger, SplitText);
@@ -46,64 +46,103 @@ function placeSolo(id: string, index: number) {
   });
 }
 
-function markCurrent(id: string, index: number) {
-  document.querySelectorAll<HTMLElement>(`#${id} .project-block`).forEach((el, beat) => {
-    const on = beat === index;
-    el.dataset.live = on ? "true" : "false";
-    if (on) el.setAttribute("aria-current", "true");
-    else el.removeAttribute("aria-current");
+function markCurrent(id: string, group: number) {
+  document.querySelectorAll<HTMLElement>(`#${id} .project-block`).forEach((el, index) => {
+    el.dataset.live = Math.floor(index / WORK_GROUP_SIZE) === group ? "true" : "false";
   });
 }
 
-function scatterSequence(
-  tl: gsap.core.Timeline,
-  range: { start: number; end: number },
-  reduced: boolean,
-) {
+/**
+ * Work runs in groups of three. Each group gets an equal slice of the section, read as
+ * u in [0, 1]: it piles up at the centre and disperses (0 to SETTLE), holds, then scatters
+ * out (EXIT to 1) while the next group is already piling in (it starts at 1 - LEAD).
+ */
+const LEAD = 0.08;
+const SETTLE = 0.26;
+const EXIT = 0.86;
+
+// The last group gets a slightly longer slice, since the section's own exit eats into it.
+const LAST_EXTRA = 0.3;
+
+function workSlices(range: Range, groups: number) {
+  const seg = (range.end - range.start) / Math.max(groups + LAST_EXTRA, 1);
+  return Array.from({ length: groups }, (_, g) => {
+    const at = range.start + seg * g;
+    const enter = g === 0 ? at : at - seg * LEAD;
+    return { at, seg, enter, settled: enter + seg * SETTLE, exit: at + seg * EXIT, last: g === groups - 1 };
+  });
+}
+
+function workGroupAt(progress: number, range: Range, groups: number) {
+  const seg = (range.end - range.start) / Math.max(groups + LAST_EXTRA, 1);
+  if (seg <= 0) return 0;
+  // Flip a little before each slice ends, once the next group has taken over the screen.
+  return Math.min(groups - 1, Math.max(0, Math.floor((progress - range.start) / seg + LEAD / 2)));
+}
+
+function scatterSequence(tl: gsap.core.Timeline, range: Range, reduced: boolean) {
   const nodes = gsap.utils.toArray<HTMLElement>("#work .project-block");
   const field = document.querySelector<HTMLElement>("#work .work-field");
   const count = nodes.length;
   if (!count || !field || range.end <= range.start) return;
-  const span = range.end - range.start;
-
-  if (reduced) {
-    tl.set(nodes, { autoAlpha: 0, pointerEvents: "none" }, 0);
-    tl.to(nodes, { autoAlpha: 1, duration: span * 0.06, ease: "none" }, range.start);
-    tl.set(nodes, { pointerEvents: "auto" }, range.start + span * 0.06);
-    return;
-  }
-
-  // Pile: every card starts stacked at the centre of the field, then disperses
-  // to its CSS position. Offsets ignore transforms, so rebuilds stay accurate.
+  const groups = Math.ceil(count / WORK_GROUP_SIZE);
+  const slices = workSlices(range, groups);
   const cx = field.clientWidth / 2;
   const cy = field.clientHeight / 2;
-  const appear = span * 0.05;
-  const travelStart = range.start + span * 0.06;
-  const travel = span * 0.09;
-  const stagger = (span * 0.05) / Math.max(count - 1, 1);
-  const settled = travelStart + travel + stagger * (count - 1);
 
-  nodes.forEach((article, index) => {
-    const dx = cx - (article.offsetLeft + article.offsetWidth / 2);
-    const dy = cy - (article.offsetTop + article.offsetHeight / 2);
-    const tilt = Math.sin(index * 12.9898 + 1.7) * 8;
-    tl.set(
-      article,
-      { autoAlpha: 0, x: dx, y: dy, scale: 0.86, rotation: tilt, zIndex: count - index, pointerEvents: "none" },
-      0,
-    );
-    tl.to(
-      article,
-      { autoAlpha: 1, scale: 1, duration: appear, ease: "power2.out" },
-      range.start + index * (appear * 0.04),
-    );
-    tl.to(
-      article,
-      { x: 0, y: 0, rotation: 0, duration: travel, ease: "power3.inOut" },
-      travelStart + stagger * index,
-    );
+  slices.forEach((slice, g) => {
+    const members = nodes.slice(g * WORK_GROUP_SIZE, (g + 1) * WORK_GROUP_SIZE);
+    const { seg } = slice;
+
+    if (reduced) {
+      const fade = seg * 0.1;
+      tl.set(members, { autoAlpha: 0, pointerEvents: "none" }, 0);
+      tl.to(members, { autoAlpha: 1, duration: fade }, slice.enter);
+      tl.set(members, { pointerEvents: "auto" }, slice.enter + fade);
+      if (!slice.last) {
+        tl.set(members, { pointerEvents: "none" }, slice.exit);
+        tl.to(members, { autoAlpha: 0, duration: seg - seg * EXIT }, slice.exit);
+      }
+      return;
+    }
+
+    // Pile at the centre, then disperse to the CSS slot. Offsets ignore transforms,
+    // so rebuilds stay accurate.
+    const appear = seg * 0.08;
+    const travelStart = slice.enter + seg * 0.07;
+    const travel = seg * 0.13;
+    const stagger = seg * 0.03;
+    members.forEach((article, index) => {
+      const ox = article.offsetLeft + article.offsetWidth / 2;
+      const oy = article.offsetTop + article.offsetHeight / 2;
+      const tilt = Math.sin((g * WORK_GROUP_SIZE + index) * 12.9898 + 1.7) * 8;
+      tl.set(
+        article,
+        { autoAlpha: 0, x: cx - ox, y: cy - oy, scale: 0.86, rotation: tilt, zIndex: 10 + members.length - index, pointerEvents: "none" },
+        0,
+      );
+      tl.to(article, { autoAlpha: 1, scale: 1, duration: appear, ease: "power2.out" }, slice.enter + index * appear * 0.08);
+      tl.to(article, { x: 0, y: 0, rotation: 0, duration: travel, ease: "power3.inOut" }, travelStart + stagger * index);
+      if (!slice.last) {
+        // Scatter outward and drift up, away from the incoming pile.
+        tl.to(
+          article,
+          {
+            x: (ox - cx) * 0.45,
+            y: -field.clientHeight * 0.12,
+            rotation: -tilt * 0.7,
+            scale: 0.92,
+            autoAlpha: 0,
+            duration: seg - seg * EXIT,
+            ease: "power2.in",
+          },
+          slice.exit,
+        );
+      }
+    });
+    tl.set(members, { zIndex: "", pointerEvents: "auto" }, slice.settled);
+    if (!slice.last) tl.set(members, { pointerEvents: "none" }, slice.exit);
   });
-  tl.set(nodes, { zIndex: "", pointerEvents: "auto" }, settled);
 }
 
 /** Section edges: ~20% entrance, ~60% fully visible hold, ~20% exit. */
@@ -117,6 +156,7 @@ function fadeField(
   tl: gsap.core.Timeline,
   range: { start: number; end: number },
   reduced: boolean,
+  late = 0,
 ) {
   const field = document.querySelector<HTMLElement>("#work .work-field");
   if (!field || range.end <= range.start) return;
@@ -125,7 +165,7 @@ function fadeField(
     field,
     { autoAlpha: 1 },
     { autoAlpha: 0, duration: leave, ease: "power2.in", immediateRender: false },
-    Math.max(range.start, range.end - leave),
+    Math.max(range.start, range.end - leave + late),
   );
 }
 
@@ -334,10 +374,11 @@ export function mountDiveTimeline(options: {
   let ctx: gsap.Context | null = null;
 
   const last = { project: -1, skill: -1, approach: -1, zone: "" };
+  let workRange: Range = { start: 0, end: 0 };
   const publish = (progress: number, force = false) => {
     const ranges = reefScroll.ranges;
     const byId = (id: string) => ranges.find((range) => range.id === id);
-    const project = beatIndex(progress, byId("work"), PROJECTS.length);
+    const project = workGroupAt(progress, workRange, WORK_GROUPS);
     const skill = beatIndex(progress, byId("skills"), SKILL_BEATS);
     const approach = beatIndex(progress, byId("approach"), APPROACH.length);
     const zone = zoneAt(progress, ranges);
@@ -382,12 +423,20 @@ export function mountDiveTimeline(options: {
       approach: { start: Math.max(0, spans.approach.start - pad), end: Math.min(spans.contact.start + pad * 0.5, spans.approach.end + pad) },
     };
 
+    workRange = vis.work;
+    // Let the field linger a touch so its fade meets Skills' entrance.
+    const workLate = pad * 0.3;
+
     // Fully-visible windows in px, for the gentle snap in smooth.ts.
     const px = (t: number) => t * max;
     reefScroll.holds = [
       { id: "top", start: 0, end: px(vis.top.end - edgeOut(vis.top)) },
       { id: "about", start: px(vis.about.start + edgeIn(vis.about)), end: px(vis.about.end - edgeOut(vis.about)) },
-      { id: "work", start: px(vis.work.start + (vis.work.end - vis.work.start) * 0.2), end: px(vis.work.end - workExit(vis.work)) },
+      ...workSlices(vis.work, WORK_GROUPS).map((slice) => ({
+        id: "work",
+        start: px(slice.settled),
+        end: px(slice.last ? vis.work.end - workExit(vis.work) + workLate : slice.exit),
+      })),
       { id: "skills", start: px(vis.skills.start + edgeIn(vis.skills)), end: px(vis.skills.end - edgeOut(vis.skills, SKILL_BEATS)) },
       { id: "approach", start: px(vis.approach.start + edgeIn(vis.approach)), end: px(vis.approach.end - edgeOut(vis.approach, APPROACH.length)) },
       { id: "contact", start: px(spans.contact.start + edgeIn(spans.contact)), end: max },
@@ -427,7 +476,7 @@ export function mountDiveTimeline(options: {
       if (custom) aboutIntro(tl, vis.about, splits);
 
       scatterSequence(tl, vis.work, reduced);
-      fadeField(tl, vis.work, reduced);
+      fadeField(tl, vis.work, reduced, workLate);
 
       fadeGroup(tl, "skills", vis.skills, reduced, false, custom, SKILL_BEATS);
       soloSequence(tl, "skills", SKILL_BEATS, spans.skills, reduced, splits);

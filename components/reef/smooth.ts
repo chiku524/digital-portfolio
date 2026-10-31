@@ -40,7 +40,9 @@ export function mountSmoothScroll(reduced: boolean) {
     const holds = reefScroll.holds;
     if (!holds.length || holds.some((hold) => y >= hold.start - 1 && y <= hold.end + 1)) return;
     // Carry on in the direction of travel, so slow scrolling still moves forward.
-    const edges = holds.flatMap((hold) => [hold.start, hold.end]);
+    // Land a few pixels inside the hold so its last settling step has definitely run.
+    const inset = (hold: { start: number; end: number }) => Math.min(8, (hold.end - hold.start) / 4);
+    const edges = holds.flatMap((hold) => [hold.start + inset(hold), hold.end - inset(hold)]);
     const ahead = edges.filter((edge) => (dir >= 0 ? edge > y : edge < y));
     const pool = ahead.length ? ahead : edges;
     const target = pool.reduce((a, b) => (Math.abs(b - y) < Math.abs(a - y) ? b : a));

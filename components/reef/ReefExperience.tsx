@@ -18,7 +18,8 @@ import { mountDiveTimeline } from "./dive-timeline";
 import { playIntro } from "./intro";
 import { mountSmoothScroll } from "./smooth";
 import { mountInteractions } from "./interactions";
-import { reefScroll, scrollToBeat, scrollToId } from "./scroll";
+import { reefScroll, scrollToBeat, scrollToId, scrollToWorkGroup } from "./scroll";
+import { WORK_GROUPS, WORK_GROUP_SIZE } from "@/content/portfolio";
 import { detectTier, type PerfTier } from "./perf";
 import { playSectionCue, trackPointer } from "./ambient";
 import AmbientControls from "./AmbientControls";
@@ -122,6 +123,10 @@ export default function ReefExperience({ hasResume = false }: { hasResume?: bool
     // After the timeline has measured each section's hold, so deep links land fully visible.
     const hash = window.location.hash.replace("#", "");
     if (ZONES.some((zone) => zone.id === hash)) scrollToId(hash);
+    // ?project=slug opens its case study; put that project's group behind the dialog.
+    const slug = new URLSearchParams(window.location.search).get("project");
+    const linked = slug ? PROJECTS.findIndex((project) => projectSlug(project) === slug) : -1;
+    if (linked >= 0) scrollToWorkGroup(Math.floor(linked / WORK_GROUP_SIZE), true);
     return () => {
       unmount();
       unsmooth();
@@ -156,7 +161,7 @@ export default function ReefExperience({ hasResume = false }: { hasResume?: bool
   const scene = ZONES.find((zone) => zone.id === active) ?? ZONES[0];
   const readout =
     active === "work"
-      ? `${scene.scene} · ${String(projectIndex + 1).padStart(2, "0")} / ${String(PROJECTS.length).padStart(2, "0")}`
+      ? `${scene.scene} · ${String(projectIndex + 1).padStart(2, "0")} / ${String(WORK_GROUPS).padStart(2, "0")}`
       : scene.scene;
 
   return (
@@ -329,6 +334,11 @@ export default function ReefExperience({ hasResume = false }: { hasResume?: bool
                   </div>
                 </article>
               ))}
+              <div className="work-dots" aria-hidden="true">
+                {Array.from({ length: WORK_GROUPS }, (_, group) => (
+                  <span key={group} data-live={group === projectIndex ? "true" : "false"} />
+                ))}
+              </div>
             </div>
           </div>
         </section>

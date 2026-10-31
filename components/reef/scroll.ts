@@ -85,6 +85,21 @@ export function scrollToId(id: string) {
   scrollToY(hold ? Math.min(Math.max(top, hold.start), Math.max(top, hold.end)) : top);
 }
 
+/** Land inside a Work group's hold; `immediate` jumps without animating (deep links). */
+export function scrollToWorkGroup(group: number, immediate = false) {
+  const holds = reefScroll.holds.filter((entry) => entry.id === "work");
+  const hold = holds[Math.min(Math.max(group, 0), holds.length - 1)];
+  if (!hold) return;
+  const y = hold.start + (hold.end - hold.start) * 0.15;
+  if (!immediate) {
+    scrollToY(y);
+    return;
+  }
+  const lenis = getLenis();
+  if (lenis && !reefScroll.reducedMotion) lenis.scrollTo(y, { immediate: true, force: true });
+  else window.scrollTo(0, y);
+}
+
 export function scrollToBeat(id: string, index: number, count: number) {
   const el = document.getElementById(id);
   if (!el || count <= 0) return;

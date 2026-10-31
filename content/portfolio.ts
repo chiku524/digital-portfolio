@@ -293,6 +293,10 @@ export const SOCIALS: Social[] = [
   },
 ];
 
+/** Work shows its projects three at a time. */
+export const WORK_GROUP_SIZE = 3;
+export const WORK_GROUPS = Math.ceil(PROJECTS.length / WORK_GROUP_SIZE);
+
 export const ZONES = [
   { id: "top", scene: "Surface", nav: null, weight: 1.9 },
   { id: "about", scene: "The drop", nav: "About", weight: 2.3 },
@@ -300,7 +304,7 @@ export const ZONES = [
     id: "work",
     scene: "Coral garden",
     nav: "Work",
-    weight: 1 + PROJECTS.length * 0.5,
+    weight: 1 + WORK_GROUPS * 1.9,
   },
   { id: "skills", scene: "Kelp forest", nav: "Skills", weight: 3.9 },
   { id: "approach", scene: "The arches", nav: "Approach", weight: 3.2 },
