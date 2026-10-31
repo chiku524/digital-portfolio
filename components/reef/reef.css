@@ -1151,7 +1151,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .intro-veil,
   .cursor-aura {
     display: none;
   }
@@ -1470,5 +1469,59 @@ html.lenis body {
   #contact .social-rail {
     width: min(40rem, 100%);
     align-self: center;
+  }
+}
+
+/* Loader: a thin current that sweeps under the wordmark while the reef loads. */
+.intro-veil {
+  grid-auto-flow: row;
+  align-content: center;
+  gap: 1.4rem;
+}
+
+.intro-loader {
+  display: grid;
+  justify-items: center;
+  gap: 0.7rem;
+}
+
+.intro-loader-bar {
+  position: relative;
+  width: min(12rem, 40vw);
+  height: 2px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: rgba(200, 255, 240, 0.14);
+}
+
+.intro-loader-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, var(--lagoon), #ffb085, transparent);
+  animation: reef-loader 1.4s ease-in-out infinite;
+}
+
+.intro-loader-label {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: rgba(200, 255, 240, 0.6);
+}
+
+@keyframes reef-loader {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro-loader-bar::after {
+    animation: none;
+    width: 100%;
+    opacity: 0.6;
+    transform: none;
   }
 }

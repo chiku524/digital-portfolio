@@ -41,6 +41,14 @@ function supportsWebGL() {
 export default function ReefExperience() {
   const root = useRef<HTMLDivElement>(null);
   const introPlayed = useRef(false);
+  // Resolves once the WebGL scene has painted its first frames, or after a fallback timeout.
+  const [sceneGate] = useState(() => {
+    let resolve = () => {};
+    const promise = new Promise<void>((done) => {
+      resolve = done;
+    });
+    return { promise, resolve };
+  });
   const bar = useRef<HTMLSpanElement>(null);
   const progress = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
@@ -112,10 +120,17 @@ export default function ReefExperience() {
     () => {
       if (!ready || !root.current || introPlayed.current) return;
       introPlayed.current = true;
-      return playIntro(root.current);
+      return playIntro(root.current, sceneGate.promise);
     },
     { dependencies: [ready], scope: root },
   );
+
+  useEffect(() => {
+    if (!ready) return;
+    if (!webgl) sceneGate.resolve();
+    const fallback = window.setTimeout(sceneGate.resolve, 6000);
+    return () => window.clearTimeout(fallback);
+  }, [ready, webgl, sceneGate]);
 
   useGSAP(
     () => {
@@ -133,12 +148,16 @@ export default function ReefExperience() {
 
   return (
     <div className="reef" ref={root}>
-      <div className="intro-veil" aria-hidden="true">
+      <div className="intro-veil" role="status" aria-live="polite" aria-label="Loading the reef">
         <p className="intro-mark">
           {PROFILE.brand.split("").map((letter, index) => (
             <span key={index}>{letter === " " ? "\u00a0" : letter}</span>
           ))}
         </p>
+        <span className="intro-loader">
+          <span className="intro-loader-bar" />
+          <span className="intro-loader-label">Diving in</span>
+        </span>
       </div>
       <div className="cursor-aura" aria-hidden="true" />
       <div className="reef-grain" aria-hidden="true" />
@@ -158,7 +177,7 @@ export default function ReefExperience() {
       </div>
       <div className="reef-vignette" aria-hidden="true" />
       {ready && webgl && tier ? (
-        <ReefCanvas key={`${mobile ? "mobile" : "desktop"}-${tier}`} mobile={mobile} reduced={reduced} tier={tier} />
+        <ReefCanvas key={`${mobile ? "mobile" : "desktop"}-${tier}`} mobile={mobile} reduced={reduced} tier={tier} onReady={sceneGate.resolve} />
       ) : null}
       <header className="nav-wrap">
         <div className="nav">
