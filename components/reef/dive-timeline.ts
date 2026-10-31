@@ -59,17 +59,49 @@ function scatterSequence(
   reduced: boolean,
 ) {
   const nodes = gsap.utils.toArray<HTMLElement>("#work .project-block");
+  const field = document.querySelector<HTMLElement>("#work .work-field");
   const count = nodes.length;
-  if (!count || range.end <= range.start) return;
+  if (!count || !field || range.end <= range.start) return;
   const span = range.end - range.start;
-  const reveal = span * 0.78;
-  const slice = reveal / count;
+
+  if (reduced) {
+    tl.set(nodes, { autoAlpha: 0, pointerEvents: "none" }, 0);
+    tl.to(nodes, { autoAlpha: 1, duration: span * 0.06, ease: "none" }, range.start);
+    tl.set(nodes, { pointerEvents: "auto" }, range.start + span * 0.06);
+    return;
+  }
+
+  // Pile: every card starts stacked at the centre of the field, then disperses
+  // to its CSS position. Offsets ignore transforms, so rebuilds stay accurate.
+  const cx = field.clientWidth / 2;
+  const cy = field.clientHeight / 2;
+  const appear = span * 0.08;
+  const travelStart = range.start + span * 0.11;
+  const travel = span * 0.2;
+  const stagger = (span * 0.14) / Math.max(count - 1, 1);
+  const settled = travelStart + travel + stagger * (count - 1);
+
   nodes.forEach((article, index) => {
-    const at = range.start + slice * index;
-    const fade = reduced ? 0.0001 : Math.max(slice * 0.8, 0.0001);
-    tl.set(article, { autoAlpha: 0, y: reduced ? 0 : 18 }, 0);
-    tl.to(article, { autoAlpha: 1, y: 0, duration: fade, ease: "power3.out" }, at);
+    const dx = cx - (article.offsetLeft + article.offsetWidth / 2);
+    const dy = cy - (article.offsetTop + article.offsetHeight / 2);
+    const tilt = Math.sin(index * 12.9898 + 1.7) * 8;
+    tl.set(
+      article,
+      { autoAlpha: 0, x: dx, y: dy, scale: 0.86, rotation: tilt, zIndex: count - index, pointerEvents: "none" },
+      0,
+    );
+    tl.to(
+      article,
+      { autoAlpha: 1, scale: 1, duration: appear, ease: "power2.out" },
+      range.start + index * (appear * 0.04),
+    );
+    tl.to(
+      article,
+      { x: 0, y: 0, rotation: 0, duration: travel, ease: "power3.inOut" },
+      travelStart + stagger * index,
+    );
   });
+  tl.set(nodes, { zIndex: "", pointerEvents: "auto" }, settled);
 }
 
 function fadeField(
