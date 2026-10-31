@@ -129,14 +129,6 @@ export const PROJECTS: Project[] = [
     links: [{ label: "Open project", href: "https://dice.express/" }],
   },
   {
-    name: "TxLINE Predict",
-    badge: "Verifiable markets",
-    description:
-      "World Cup prediction markets on Solana with live TxLINE match data, USDC escrow pools, and Merkle-proof settlement.",
-    highlight: "Anchor escrow, SSE live feed, trustless claim payouts.",
-    links: [{ label: "Open project", href: "https://txline-predict.vercel.app/" }],
-  },
-  {
     name: "The Studio Circus",
     badge: "AI education",
     description:
@@ -185,20 +177,6 @@ export const PROJECTS: Project[] = [
       "Institutional site for Schmiedeler & Associates Inc.—services, product lines, manufacturers, and contact flows on Cloudflare Pages.",
     highlight: "Static site, contact API, admin portal.",
     links: [{ label: "Open project", href: "https://schmiedeler.com/" }],
-  },
-  {
-    name: "The Blockchain Circus",
-    badge: "TikTok automation",
-    description:
-      "n8n + RunwayML pipeline that generates and publishes educational blockchain shorts to TikTok on a steady cadence.",
-    highlight: "AI video gen, TikTok API, automated publishing.",
-    links: [
-      {
-        label: "Open project",
-        href: "https://nicochikuji-portfolio.vercel.app/the-blockchain-circus",
-      },
-      { label: "TikTok", href: "https://www.tiktok.com/@TheBlockchainCircus" },
-    ],
   },
   {
     name: "Boing Network",
