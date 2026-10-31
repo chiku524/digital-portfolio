@@ -13,6 +13,7 @@ import { samplePose, writeStation, type V3 } from "./path";
 import Effects from "./Effects";
 import { buildReef, type Piece, type Swimmer } from "./reef-data";
 import Fishes from "./Fish";
+import SeaLife from "./SeaLife";
 import { anemone, brainCoral, branchingCoral, kelpFrond, rock, seaFan, seaGrass } from "./geometry";
 import { oceanMotion, oceanTime, reefMaterial } from "./materials";
 import { beatIndex, clamp, reefScroll, smoothstep } from "./scroll";
@@ -551,6 +552,7 @@ export default function ReefWorld({
       <Field pieces={reef.tips} geometry={geos.tip} material={mats.tip} />
       <Field pieces={reef.kelp} geometry={geos.kelp} material={mats.kelp} />
       <Fishes flocks={reef.flocks} lite={lite} />
+      {reduced ? null : <SeaLife lite={lite} tier={tier} />}
       <Bubbles bubbles={reef.bubbles} geometry={geos.bubble} material={mats.bubble} />
       <LightRays />
       <Sparkles
