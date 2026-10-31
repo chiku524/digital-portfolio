@@ -19,6 +19,7 @@ import { playIntro } from "./intro";
 import { mountSmoothScroll } from "./smooth";
 import { mountInteractions } from "./interactions";
 import { reefScroll, scrollToBeat, scrollToId } from "./scroll";
+import { detectTier, type PerfTier } from "./perf";
 import "./reef.css";
 
 const ReefCanvas = dynamic(() => import("./ReefCanvas"), {
@@ -46,6 +47,7 @@ export default function ReefExperience() {
   const [mobile, setMobile] = useState(false);
   const [reduced, setReduced] = useState(false);
   const [webgl, setWebgl] = useState(true);
+  const [tier, setTier] = useState<PerfTier | null>(null);
   const [active, setActive] = useState("top");
   const [projectIndex, setProjectIndex] = useState(0);
   const [skillIndex, setSkillIndex] = useState(0);
@@ -70,6 +72,18 @@ export default function ReefExperience() {
     return () => {
       motion.removeEventListener("change", apply);
       narrow.removeEventListener("change", apply);
+    };
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    detectTier().then((next) => {
+      if (!alive) return;
+      document.documentElement.dataset.perfTier = next;
+      setTier(next);
+    });
+    return () => {
+      alive = false;
     };
   }, []);
 
@@ -143,8 +157,8 @@ export default function ReefExperience() {
         <span ref={bar} />
       </div>
       <div className="reef-vignette" aria-hidden="true" />
-      {ready && webgl ? (
-        <ReefCanvas key={mobile ? "mobile" : "desktop"} mobile={mobile} reduced={reduced} />
+      {ready && webgl && tier ? (
+        <ReefCanvas key={`${mobile ? "mobile" : "desktop"}-${tier}`} mobile={mobile} reduced={reduced} tier={tier} />
       ) : null}
       <header className="nav-wrap">
         <div className="nav">

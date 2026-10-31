@@ -1,9 +1,10 @@
 "use client";
 
-import { Component, type ReactNode, useRef } from "react";
+import { Component, type ReactNode, useEffect, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import * as THREE from "three";
 import ReefWorld from "./ReefWorld";
+import { TIER_DPR, type PerfTier } from "./perf";
 
 class Boundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
@@ -21,21 +22,43 @@ class Boundary extends Component<{ children: ReactNode }, { failed: boolean }> {
 export default function ReefCanvas({
   mobile,
   reduced,
+  tier,
+  onReady,
 }: {
   mobile: boolean;
   reduced: boolean;
+  tier: PerfTier;
+  onReady?: () => void;
 }) {
   const shell = useRef<HTMLDivElement>(null);
+  // Stop rendering entirely while the tab is hidden or the canvas is scrolled out of view.
+  const [hidden, setHidden] = useState(false);
+  const [offscreen, setOffscreen] = useState(false);
+  useEffect(() => {
+    const onVisibility = () => setHidden(document.visibilityState === "hidden");
+    onVisibility();
+    document.addEventListener("visibilitychange", onVisibility);
+    let observer: IntersectionObserver | undefined;
+    if (shell.current && "IntersectionObserver" in window) {
+      observer = new IntersectionObserver(([entry]) => setOffscreen(!entry.isIntersecting));
+      observer.observe(shell.current);
+    }
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      observer?.disconnect();
+    };
+  }, []);
 
   return (
     <div ref={shell} className="reef-canvas" aria-hidden="true">
       <Boundary>
         <Canvas
-          dpr={mobile ? [1, 1.2] : [1, 1.5]}
+          dpr={mobile && tier === "high" ? TIER_DPR.mid : TIER_DPR[tier]}
+          frameloop={hidden || offscreen ? "never" : "always"}
           gl={{
-            antialias: !mobile,
+            antialias: !mobile && tier === "high",
             alpha: false,
-            powerPreference: "high-performance",
+            powerPreference: tier === "low" ? "low-power" : "high-performance",
             stencil: false,
           }}
           camera={{
@@ -51,9 +74,11 @@ export default function ReefCanvas({
             gl.setClearColor("#9fd4d4");
             gl.domElement.tabIndex = -1;
             shell.current?.classList.add("is-ready");
+            // Wait two frames so the first real render is on screen before announcing readiness.
+            requestAnimationFrame(() => requestAnimationFrame(() => onReady?.()));
           }}
         >
-          <ReefWorld mobile={mobile} reduced={reduced} />
+          <ReefWorld mobile={mobile} reduced={reduced} tier={tier} />
         </Canvas>
       </Boundary>
     </div>

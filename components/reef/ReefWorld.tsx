@@ -15,6 +15,7 @@ import Fishes from "./Fish";
 import { anemone, brainCoral, branchingCoral, kelpFrond, rock, seaFan, seaGrass } from "./geometry";
 import { oceanMotion, oceanTime, reefMaterial } from "./materials";
 import { beatIndex, clamp, reefScroll, smoothstep } from "./scroll";
+import type { PerfTier } from "./perf";
 
 const RAYS = [
   { position: [1.4, 6.2, 1.2], rotation: [0.15, 0.2, 0.35], scale: [1.1, 7.5, 1] },
@@ -389,28 +390,32 @@ function CameraRig({ mobile }: { mobile: boolean }) {
 export default function ReefWorld({
   mobile,
   reduced,
+  tier = "high",
 }: {
   mobile: boolean;
   reduced: boolean;
+  tier?: PerfTier;
 }) {
+  // Low tier (or phones) get the lighter reef: fewer fish, kelp, bubbles and simpler meshes.
+  const lite = mobile || tier === "low";
   // Post-processing is dropped automatically if the GPU can't hold frame rate.
   const [fx, setFx] = useState(true);
-  const reef = useMemo(() => buildReef(mobile), [mobile]);
+  const reef = useMemo(() => buildReef(lite), [lite]);
   const geos = useMemo(
     () => ({
-      branch: branchingCoral("staghorn", mobile),
-      finger: branchingCoral("finger", mobile),
-      fan: seaFan(mobile),
-      brain: brainCoral(mobile),
+      branch: branchingCoral("staghorn", lite),
+      finger: branchingCoral("finger", lite),
+      fan: seaFan(lite),
+      brain: brainCoral(lite),
       tip: new THREE.SphereGeometry(0.16, 10, 8),
-      kelp: kelpFrond(mobile),
-      rock: rock(mobile),
-      anemone: anemone(mobile),
-      grass: seaGrass(mobile),
+      kelp: kelpFrond(lite),
+      rock: rock(lite),
+      anemone: anemone(lite),
+      grass: seaGrass(lite),
       disc: new THREE.CircleGeometry(1, 18),
       bubble: new THREE.SphereGeometry(0.08, 8, 6),
     }),
-    [mobile],
+    [lite],
   );
   const mats = useMemo(
     () => ({
@@ -492,11 +497,11 @@ export default function ReefWorld({
       <Field pieces={reef.fans} geometry={geos.fan} material={mats.fan} />
       <Field pieces={reef.tips} geometry={geos.tip} material={mats.tip} />
       <Field pieces={reef.kelp} geometry={geos.kelp} material={mats.kelp} />
-      <Fishes flocks={reef.flocks} lite={mobile} />
+      <Fishes flocks={reef.flocks} lite={lite} />
       <Bubbles bubbles={reef.bubbles} geometry={geos.bubble} material={mats.bubble} />
       <LightRays />
       <Sparkles
-        count={mobile ? 60 : 160}
+        count={lite ? 50 : tier === "mid" ? 100 : 160}
         scale={[14, 12, 90]}
         position={[0, 0, -36]}
         size={mobile ? 1.6 : 2.2}
@@ -534,7 +539,7 @@ export default function ReefWorld({
           <meshStandardMaterial color="#ffb15a" flatShading emissive="#ffd39a" emissiveIntensity={0.2} />
         </mesh>
       </Float>
-      {fx ? <Effects mobile={mobile} /> : null}
+      {fx && tier !== "low" ? <Effects mobile={mobile || tier === "mid"} /> : null}
     </PerformanceMonitor>
   );
 }
