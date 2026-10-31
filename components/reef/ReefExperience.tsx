@@ -305,6 +305,9 @@ export default function ReefExperience() {
                         target="_blank" aria-describedby="new-tab-note"
                         rel="noreferrer"
                         aria-label={`${link.label}: ${project.name}`}
+                        data-track="project_click"
+                        data-track-project={project.name}
+                        data-track-link={link.label}
                       >
                         {link.label} <span aria-hidden="true">↗</span>
                       </a>
@@ -457,7 +460,7 @@ export default function ReefExperience() {
                 <h3 className="social-rail-title">{PROFILE.socialTitle}</h3>
                 <div className="socials">
                   {SOCIALS.map((social) => (
-                    <a key={social.label} className="social" href={social.href} target="_blank" aria-describedby="new-tab-note" rel="noreferrer">
+                    <a key={social.label} className="social" data-track="social_click" data-track-network={social.label} href={social.href} target="_blank" aria-describedby="new-tab-note" rel="noreferrer">
                       <strong>
                         {social.label} · {social.handle}
                       </strong>
