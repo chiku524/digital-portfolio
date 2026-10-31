@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Geist, Geist_Mono } from "next/font/google";
 import { PROFILE } from "@/content/portfolio";
+import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -20,8 +21,16 @@ const display = Fraunces({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://digital-portfolio-nico-builds.vercel.app"),
-  title: "Nico Chikuji | Full-Stack Developer",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Nico Chikuji | Full-Stack Developer",
+    template: "%s | nico.builds",
+  },
+  applicationName: PROFILE.brand,
+  keywords: ["Nico Chikuji", "nico.builds", "full-stack developer", "web3", "AI", "Next.js", "React", "portfolio"],
+  creator: PROFILE.name,
+  alternates: { canonical: "/" },
+  robots: { index: true, follow: true },
   description:
     "Full-stack developer building web3, AI, and product systems that perform and scale. Flow beyond limits. Stay Playful, Ship Serious.",
   authors: [{ name: PROFILE.name, url: PROFILE.github }],
@@ -31,6 +40,13 @@ export const metadata: Metadata = {
     type: "website",
     url: "/",
     siteName: PROFILE.brand,
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Nico Chikuji | Full-Stack Developer",
+    description: PROFILE.summary,
+    creator: "@NChikuji",
   },
 };
 
