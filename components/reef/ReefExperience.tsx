@@ -40,7 +40,7 @@ function supportsWebGL() {
   }
 }
 
-export default function ReefExperience() {
+export default function ReefExperience({ hasResume = false }: { hasResume?: boolean }) {
   const root = useRef<HTMLDivElement>(null);
   const introPlayed = useRef(false);
   // Resolves once the WebGL scene has painted its first frames, or after a fallback timeout.
@@ -252,6 +252,11 @@ export default function ReefExperience() {
                 <a className="button button--ghost" href={PROFILE.calendly} target="_blank" aria-describedby="new-tab-note" rel="noreferrer">
                   Book a call
                 </a>
+                {hasResume ? (
+                  <a className="button button--ghost" href="/resume.pdf" target="_blank" aria-describedby="new-tab-note" rel="noreferrer" data-track="resume_click" data-track-from="hero">
+                    Resume <span aria-hidden="true">↗</span>
+                  </a>
+                ) : null}
               </div>
               <div className="chips" style={{ marginTop: "0.9rem" }}>
                 {VALUES.map((value) => (
@@ -444,6 +449,11 @@ export default function ReefExperience() {
                 >
                   Back to top
                 </a>
+                {hasResume ? (
+                  <a className="button button--ghost" href="/resume.pdf" target="_blank" aria-describedby="new-tab-note" rel="noreferrer" data-track="resume_click" data-track-from="contact">
+                    Resume <span aria-hidden="true">↗</span>
+                  </a>
+                ) : null}
               </div>
               </div>
               </div>
