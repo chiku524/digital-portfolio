@@ -158,6 +158,7 @@ function turtleMaterial() {
         `#include <common>
         varying vec3 vLocal;
         varying float vPart;
+        vec3 vTint;
         ${VORONOI}`,
       )
       .replace(
@@ -168,24 +169,36 @@ function turtleMaterial() {
           vec3 col;
           if (vPart < 0.5) {
             if (p.y < -0.015) {
-              col = vec3(0.86, 0.78, 0.55); // plastron
+              col = vec3(0.95, 0.82, 0.5); // plastron
             } else {
-              vec2 v = slVoronoi(vec2(p.x * 3.6, p.z * 4.2));
-              float seam = smoothstep(0.02, 0.11, v.y - v.x);
-              float rays = 0.5 + 0.5 * sin(atan(p.z, p.x) * 9.0 + v.x * 14.0);
-              vec3 base = mix(vec3(0.22, 0.16, 0.07), vec3(0.52, 0.36, 0.14), rays * (1.0 - v.x));
-              base = mix(base, vec3(0.62, 0.5, 0.22), smoothstep(0.35, 0.0, v.x) * 0.35);
-              col = mix(vec3(0.85, 0.76, 0.5), base, seam);
+              // Hawksbill-style scutes: dark seams, amber centres radiating to olive edges.
+              vec2 v = slVoronoi(vec2(p.x * 4.4, p.z * 5.2));
+              float edge = v.y - v.x;
+              float seam = smoothstep(0.015, 0.07, edge);
+              float rays = 0.5 + 0.5 * sin(atan(p.z, p.x) * 11.0 + v.x * 18.0);
+              vec3 olive = vec3(0.30, 0.34, 0.10);
+              vec3 amber = vec3(0.92, 0.56, 0.16);
+              vec3 umber = vec3(0.38, 0.18, 0.05);
+              vec3 base = mix(olive, amber, smoothstep(0.55, 0.05, v.x));
+              base = mix(base, umber, rays * 0.45 * smoothstep(0.1, 0.5, v.x));
+              col = mix(vec3(0.10, 0.07, 0.03), base, seam);
             }
           } else {
             vec2 v = slVoronoi(vec2(p.x + p.y, p.z) * 11.0);
             float seam = smoothstep(0.0, 0.08, v.y - v.x);
-            vec3 scale = mix(vec3(0.24, 0.2, 0.1), vec3(0.42, 0.33, 0.15), slHash(floor(vec2(p.x, p.z) * 11.0)).x);
-            col = mix(vec3(0.82, 0.76, 0.52), scale, seam);
-            if (p.y < -0.05) col = mix(col, vec3(0.86, 0.8, 0.6), 0.6);
+            vec3 scale = mix(vec3(0.36, 0.30, 0.10), vec3(0.62, 0.46, 0.16), slHash(floor(vec2(p.x, p.z) * 11.0)).x);
+            col = mix(vec3(0.95, 0.88, 0.62), scale, seam);
+            if (p.y < -0.05) col = mix(col, vec3(0.95, 0.88, 0.66), 0.6);
           }
           diffuseColor.rgb = col;
+          vTint = col;
         }`,
+      )
+      .replace(
+        "#include <emissivemap_fragment>",
+        `#include <emissivemap_fragment>
+        // Slight self-illumination so the blue water light doesn't wash the shell grey.
+        totalEmissiveRadiance += vTint * 0.22;`,
       );
   };
   mat.customProgramCacheKey = () => "sea-turtle";
@@ -334,6 +347,9 @@ const dirV = new THREE.Vector3();
 const X = new THREE.Vector3(1, 0, 0);
 const Y = new THREE.Vector3(0, 1, 0);
 const qa = new THREE.Quaternion();
+const sideV = new THREE.Vector3();
+const upV = new THREE.Vector3();
+const basis = new THREE.Matrix4();
 const qb = new THREE.Quaternion();
 
 function Creature({
@@ -419,7 +435,12 @@ function Creature({
     dirV.subVectors(p.end, p.start).normalize();
     if (kind === "turtle") {
       mesh.position.y += Math.sin(now * 0.62) * 0.12;
-      qa.setFromUnitVectors(X, dirV);
+      // Build a level basis (heading = travel direction, up = world up) so a
+      // right-to-left pass never rolls the turtle belly-up.
+      sideV.crossVectors(dirV, Y).normalize();
+      upV.crossVectors(sideV, dirV).normalize();
+      basis.makeBasis(dirV, upV, sideV);
+      qa.setFromRotationMatrix(basis);
       qb.setFromAxisAngle(X, Math.sin(now * 0.4) * 0.12);
       mesh.quaternion.copy(qa).multiply(qb);
       mesh.rotateZ(Math.sin(now * 1.25) * 0.05 + 0.06);
