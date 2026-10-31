@@ -1,18 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { disposeOcean, nightFromClock, reefEnv, setOceanSound } from "./ambient";
+import { applyTide, disposeOcean, initialTide, setOceanSound } from "./ambient";
 
 export default function AmbientControls() {
   const [sound, setSound] = useState(false);
   const [night, setNight] = useState(false);
 
   useEffect(() => {
-    const initial = nightFromClock() === 1;
-    reefEnv.nightTarget = initial ? 1 : 0;
-    reefEnv.night = reefEnv.nightTarget;
-    document.documentElement.dataset.tide = initial ? "night" : "day";
-    const id = window.setTimeout(() => setNight(initial), 0);
+    // Resolved on the client only (localStorage / local clock), so SSR markup never mismatches.
+    const tide = initialTide();
+    applyTide(tide, { animate: false });
+    const id = window.setTimeout(() => setNight(tide === "night"), 0);
     return () => {
       window.clearTimeout(id);
       disposeOcean();
@@ -42,8 +41,7 @@ export default function AmbientControls() {
         title={night ? "Switch to daytime water" : "Switch to night water"}
         onClick={() => {
           const next = !night;
-          reefEnv.nightTarget = next ? 1 : 0;
-          document.documentElement.dataset.tide = next ? "night" : "day";
+          applyTide(next ? "night" : "day", { persist: true });
           setNight(next);
         }}
       >

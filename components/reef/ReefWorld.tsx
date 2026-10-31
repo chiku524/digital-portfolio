@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { reefEnv } from "./ambient";
+import { reefEnv, uNight } from "./ambient";
 import { AdaptiveDpr } from "@react-three/drei/core/AdaptiveDpr";
 import { Float } from "@react-three/drei/core/Float";
 import { PerformanceMonitor } from "@react-three/drei/core/PerformanceMonitor";
@@ -69,6 +69,50 @@ function Field({
 }
 
 /** Advances the shared clock that drives every swaying / swimming shader. */
+/** Scene lights that follow the day/night blend (sun to moonlight). */
+function TideLights() {
+  const hemi = useRef<THREE.HemisphereLight>(null);
+  const amb = useRef<THREE.AmbientLight>(null);
+  const sun = useRef<THREE.DirectionalLight>(null);
+  const fill = useRef<THREE.DirectionalLight>(null);
+  const c = useMemo(
+    () => ({
+      sunDay: new THREE.Color("#fff6ea"),
+      sunNight: new THREE.Color("#9fb4ff"),
+      ambDay: new THREE.Color("#8fd0d4"),
+      ambNight: new THREE.Color("#4a55b8"),
+      skyDay: new THREE.Color("#c9fbff"),
+      skyNight: new THREE.Color("#5a68c8"),
+    }),
+    [],
+  );
+  useFrame(() => {
+    const n = reefEnv.night;
+    const day = 1 - n;
+    if (hemi.current) {
+      hemi.current.intensity = 0.72 * (1.15 * day + 0.4 * n);
+      hemi.current.color.copy(c.skyDay).lerp(c.skyNight, n);
+    }
+    if (amb.current) {
+      amb.current.intensity = 0.38 * (1.15 * day + 0.55 * n);
+      amb.current.color.copy(c.ambDay).lerp(c.ambNight, n);
+    }
+    if (sun.current) {
+      sun.current.intensity = 2.4 * (1.12 * day + 0.28 * n);
+      sun.current.color.copy(c.sunDay).lerp(c.sunNight, n);
+    }
+    if (fill.current) fill.current.intensity = 1.4 * (1.05 * day + 0.45 * n);
+  });
+  return (
+    <>
+      <hemisphereLight ref={hemi} args={["#c9fbff", "#16342c", 0.72]} />
+      <ambientLight ref={amb} intensity={0.38} color="#8fd0d4" />
+      <directionalLight ref={sun} position={[6, 14, 8]} intensity={2.4} color="#fff6ea" />
+      <directionalLight ref={fill} position={[-8, 3, -14]} intensity={1.4} color="#3fe0c8" />
+    </>
+  );
+}
+
 function OceanClock({ reduced }: { reduced: boolean }) {
   useFrame((_, delta) => {
     const calm = reduced || reefScroll.reducedMotion ? 0.25 : 1;
@@ -135,7 +179,7 @@ function Water({ mobile }: { mobile: boolean }) {
         side={THREE.DoubleSide}
         toneMapped={false}
         glslVersion={THREE.GLSL3}
-        uniforms={{ uTime: { value: 0 } }}
+        uniforms={{ uTime: { value: 0 }, uNight }}
         vertexShader={`
           uniform float uTime;
           out float vElev;
@@ -149,11 +193,12 @@ function Water({ mobile }: { mobile: boolean }) {
         `}
         fragmentShader={`
           precision mediump float;
+          uniform float uNight;
           in float vElev;
           out vec4 fragColor;
           void main() {
-            vec3 deep = vec3(0.04, 0.32, 0.4);
-            vec3 crest = vec3(0.78, 0.96, 0.95);
+            vec3 deep = mix(vec3(0.05, 0.36, 0.44), vec3(0.03, 0.05, 0.2), uNight);
+            vec3 crest = mix(vec3(0.84, 1.0, 0.98), vec3(0.42, 0.5, 0.82), uNight);
             vec3 col = mix(deep, crest, smoothstep(-0.04, 0.16, vElev));
             fragColor = vec4(col, 0.46);
           }
@@ -175,7 +220,7 @@ function Sand() {
         ref={material}
         toneMapped={false}
         glslVersion={THREE.GLSL3}
-        uniforms={{ uTime: { value: 0 } }}
+        uniforms={{ uTime: { value: 0 }, uNight }}
         vertexShader={`
           out vec3 vPos;
           void main() {
@@ -186,6 +231,7 @@ function Sand() {
         fragmentShader={`
           precision mediump float;
           uniform float uTime;
+          uniform float uNight;
           in vec3 vPos;
           out vec4 fragColor;
           void main() {
@@ -200,6 +246,8 @@ function Sand() {
             vec3 light = vec3(0.32, 0.72, 0.66);
             float fade = smoothstep(80.0, 10.0, length(vPos.xy));
             vec3 col = sand + light * caustic * fade;
+            vec3 moon = (sand + vec3(0.2, 0.24, 0.62) * caustic * fade) * vec3(0.5, 0.52, 0.95);
+            col = mix(col * 1.12, moon, uNight);
             fragColor = vec4(col, 1.0);
           }
         `}
@@ -217,7 +265,7 @@ function LightRays() {
     mats.current.forEach((mat, index) => {
       if (!mat) return;
       const shimmer = reefScroll.reducedMotion ? 1 : 0.65 + Math.sin(time * 0.6 + index * 1.7) * 0.35;
-      mat.opacity = 0.1 * shimmer * (0.25 + depth * 0.75);
+      mat.opacity = 0.1 * shimmer * (0.25 + depth * 0.75) * (1 - reefEnv.night * 0.75);
     });
   });
   return (
@@ -263,7 +311,8 @@ function CameraRig({ mobile }: { mobile: boolean }) {
   const deep = useMemo(() => new THREE.Color("#070d16"), []);
   const sky = useMemo(() => new THREE.Color("#b7ebe8"), []);
   const fogColor = useMemo(() => new THREE.Color("#127888"), []);
-  const nightTint = useMemo(() => new THREE.Color("#0a1a3a"), []);
+  const nightTint = useMemo(() => new THREE.Color("#0b1240"), []);
+  const daySky = useMemo(() => new THREE.Color("#4fd2d6"), []);
   const glow = useRef<THREE.PointLight>(null);
 
   useFrame((_, delta) => {
@@ -369,11 +418,14 @@ function CameraRig({ mobile }: { mobile: boolean }) {
         fogNode.near = 5.2 - depth * 1.5;
         fogNode.far = 17 - depth * 6;
       }
-      // Day/night: ease toward the target and pull the water toward a moonlit indigo.
-      reefEnv.night += (reefEnv.nightTarget - reefEnv.night) * (1 - Math.exp(-delta * 1.5));
-      if (reefEnv.night > 0.001) fogColor.lerp(nightTint, reefEnv.night * 0.38);
+      // Day/night (eased by GSAP in ambient.ts): night pulls the water to a moonlit indigo,
+      // day lifts it slightly brighter.
+      const n = reefEnv.night;
+      if (n > 0.001) fogColor.lerp(nightTint, n * 0.72);
+      else fogColor.lerp(daySky, 0.12);
       fogNode.color.copy(fogColor);
       gl.setClearColor(fogColor);
+      (window as unknown as { __reefTide?: object }).__reefTide = { night: n, fog: fogColor.getHexString(), uNight: uNight.value };
     }
   });
 
@@ -484,10 +536,7 @@ export default function ReefWorld({
   return (
     <PerformanceMonitor onDecline={() => setFx(false)} flipflops={2} onFallback={() => setFx(false)}>
       <AdaptiveDpr />
-      <hemisphereLight args={["#c9fbff", "#16342c", 0.72]} />
-      <ambientLight intensity={0.38} color="#8fd0d4" />
-      <directionalLight position={[6, 14, 8]} intensity={2.4} color="#fff6ea" />
-      <directionalLight position={[-8, 3, -14]} intensity={1.4} color="#3fe0c8" />
+      <TideLights />
       <OceanClock reduced={reduced} />
       <CameraRig mobile={mobile} />
       <Sand />

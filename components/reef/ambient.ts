@@ -1,5 +1,7 @@
 "use client";
 
+import gsap from "gsap";
+
 /** Shared, non-React state for the ambient extras (audio, cursor, day/night). */
 export const reefEnv = {
   /** 0 = day palette, 1 = night palette (eased toward `nightTarget`). */
@@ -8,6 +10,57 @@ export const reefEnv = {
   /** Cursor in normalized device coords, or null when no fine pointer is active. */
   pointer: null as null | { x: number; y: number },
 };
+
+if (typeof window !== "undefined") (window as unknown as { __reefEnv?: object }).__reefEnv = reefEnv;
+
+/** Shared shader uniform: every night-aware material reads this same object. */
+export const uNight = { value: 0 };
+
+export type Tide = "day" | "night";
+const STORAGE_KEY = "reef-tide";
+
+export function storedTide(): Tide | null {
+  try {
+    const v = window.localStorage.getItem(STORAGE_KEY);
+    return v === "day" || v === "night" ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Resolved mode: saved choice wins, otherwise local time. Client-only. */
+export function initialTide(): Tide {
+  return storedTide() ?? (nightFromClock() ? "night" : "day");
+}
+
+/** Apply a mode to the scene + DOM. `persist` saves an explicit user choice. */
+export function applyTide(tide: Tide, { animate = true, persist = false } = {}) {
+  const target = tide === "night" ? 1 : 0;
+  reefEnv.nightTarget = target;
+  document.documentElement.dataset.tide = tide;
+  if (persist) {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, tide);
+    } catch {
+      /* storage blocked: still switch for this visit */
+    }
+  }
+  gsap.killTweensOf(reefEnv, "night");
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!animate || reduce) {
+    reefEnv.night = target;
+    uNight.value = target;
+    return;
+  }
+  gsap.to(reefEnv, {
+    night: target,
+    duration: 1,
+    ease: "power2.inOut",
+    onUpdate: () => {
+      uNight.value = reefEnv.night;
+    },
+  });
+}
 
 /** Local-time default: night from ~19:00 to ~06:00. */
 export function nightFromClock(date = new Date()) {
