@@ -20,6 +20,8 @@ import { mountSmoothScroll } from "./smooth";
 import { mountInteractions } from "./interactions";
 import { reefScroll, scrollToBeat, scrollToId } from "./scroll";
 import { detectTier, type PerfTier } from "./perf";
+import { trackPointer } from "./ambient";
+import AmbientControls from "./AmbientControls";
 import "./reef.css";
 
 const ReefCanvas = dynamic(() => import("./ReefCanvas"), {
@@ -98,6 +100,7 @@ export default function ReefExperience() {
   useEffect(() => {
     if (!ready) return;
     const unsmooth = mountSmoothScroll(reduced);
+    const untrack = trackPointer();
     const hash = window.location.hash.replace("#", "");
     if (ZONES.some((zone) => zone.id === hash)) scrollToId(hash);
     const unmount = mountDiveTimeline({
@@ -113,6 +116,7 @@ export default function ReefExperience() {
     return () => {
       unmount();
       unsmooth();
+      untrack();
     };
   }, [ready, reduced, mobile]);
 
@@ -216,6 +220,7 @@ export default function ReefExperience() {
               </a>
             ))}
           </nav>
+          <AmbientControls />
           <a className="nav-book" href={PROFILE.calendly} target="_blank" aria-describedby="new-tab-note" rel="noreferrer">
             Book a call
           </a>

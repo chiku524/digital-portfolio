@@ -1600,3 +1600,66 @@ html.lenis body {
 .social:focus-visible {
   outline-offset: 2px;
 }
+
+/* Ambient extras: ocean sound + day/night toggles */
+.ambient-controls {
+  pointer-events: auto;
+  display: inline-flex;
+  gap: 0.35rem;
+  margin-left: auto;
+  margin-right: 0.6rem;
+}
+
+.ambient-toggle {
+  width: 44px;
+  height: 44px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(232, 255, 248, 0.22);
+  background: rgba(4, 16, 22, 0.55);
+  color: #e7fffb;
+  cursor: pointer;
+  transition: background-color 250ms ease, border-color 250ms ease;
+}
+
+.ambient-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.ambient-toggle[aria-pressed="true"] {
+  border-color: rgba(125, 255, 225, 0.6);
+}
+
+.ambient-toggle svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.reef-fallback {
+  transition: filter 1.2s ease;
+}
+
+html[data-tide="night"] .reef-fallback {
+  filter: hue-rotate(18deg) brightness(0.72) saturate(0.9);
+}
+
+@media (max-width: 640px) {
+  .ambient-controls {
+    position: absolute;
+    right: 0.75rem;
+    top: calc(100% + 0.5rem);
+    z-index: 30;
+    margin: 0;
+  }
+
+  .ambient-toggle {
+    background: rgba(4, 16, 22, 0.78);
+    backdrop-filter: blur(6px);
+  }
+}

@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
+import { reefEnv } from "./ambient";
 import { AdaptiveDpr } from "@react-three/drei/core/AdaptiveDpr";
 import { Float } from "@react-three/drei/core/Float";
 import { PerformanceMonitor } from "@react-three/drei/core/PerformanceMonitor";
@@ -262,6 +263,7 @@ function CameraRig({ mobile }: { mobile: boolean }) {
   const deep = useMemo(() => new THREE.Color("#070d16"), []);
   const sky = useMemo(() => new THREE.Color("#b7ebe8"), []);
   const fogColor = useMemo(() => new THREE.Color("#127888"), []);
+  const nightTint = useMemo(() => new THREE.Color("#0a1a3a"), []);
   const glow = useRef<THREE.PointLight>(null);
 
   useFrame((_, delta) => {
@@ -367,6 +369,9 @@ function CameraRig({ mobile }: { mobile: boolean }) {
         fogNode.near = 5.2 - depth * 1.5;
         fogNode.far = 17 - depth * 6;
       }
+      // Day/night: ease toward the target and pull the water toward a moonlit indigo.
+      reefEnv.night += (reefEnv.nightTarget - reefEnv.night) * (1 - Math.exp(-delta * 1.5));
+      if (reefEnv.night > 0.001) fogColor.lerp(nightTint, reefEnv.night * 0.38);
       fogNode.color.copy(fogColor);
       gl.setClearColor(fogColor);
     }

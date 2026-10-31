@@ -7,6 +7,7 @@ import { fish as fishGeometry, type Species } from "./geometry";
 import { fishMaterial } from "./materials";
 import type { Flock } from "./reef-data";
 import { reefScroll } from "./scroll";
+import { reefEnv } from "./ambient";
 
 const LENGTH: Record<Species, number> = { clown: 0.5, tang: 0.72, angel: 0.85, chromis: 0.34 };
 const SPEED: Record<Species, [number, number]> = {
@@ -30,6 +31,10 @@ const tmp = new THREE.Vector3();
 const center = new THREE.Vector3();
 const heading = new THREE.Vector3();
 const home = new THREE.Vector3();
+const ray = new THREE.Ray();
+const ndc = new THREE.Vector3();
+const nearest = new THREE.Vector3();
+const FLEE_RADIUS = 1.8;
 
 /**
  * One species = one instanced mesh. Each fish flocks with its own group
@@ -91,7 +96,7 @@ function Species({ species, flocks, lite }: { species: Species; flocks: Flock[];
     material.dispose();
   }, [geometry, material]);
 
-  useFrame(({ clock }, delta) => {
+  useFrame(({ clock, camera }, delta) => {
     const mesh = ref.current;
     const sims = simsRef.current;
     if (!mesh || !sims.length) return;
@@ -100,6 +105,13 @@ function Species({ species, flocks, lite }: { species: Species; flocks: Flock[];
     const calm = reefScroll.reducedMotion ? 0.25 : 1;
     const rush = 1 + Math.abs(reefScroll.lean) * 1.6;
     const [minSpeed, maxSpeed] = SPEED[species];
+    // Cursor avoidance: fish near the ray under the mouse dart away from it.
+    const pointer = reefScroll.reducedMotion ? null : reefEnv.pointer;
+    if (pointer) {
+      ray.origin.setFromMatrixPosition(camera.matrixWorld);
+      ndc.set(pointer.x, pointer.y, 0.5).unproject(camera);
+      ray.direction.subVectors(ndc, ray.origin).normalize();
+    }
 
     for (let i = 0; i < sims.length; i += 1) {
       const fish = sims[i];
@@ -133,7 +145,17 @@ function Species({ species, flocks, lite }: { species: Species; flocks: Flock[];
       const far = tmp.length() / flock.radius;
       steer.addScaledVector(tmp, 0.25 + Math.max(0, far - 1) * 0.9);
       steer.y -= fish.vel.y * 1.5;
-      const limit = 1.4;
+      let limit = 1.4;
+      if (pointer) {
+        ray.closestPointToPoint(fish.pos, nearest);
+        tmp.subVectors(fish.pos, nearest);
+        const d = tmp.length();
+        if (d < FLEE_RADIUS && d > 0.0001) {
+          const push = 1 - d / FLEE_RADIUS;
+          steer.addScaledVector(tmp, (push * push * 9) / d);
+          limit = 1.4 + push * 4;
+        }
+      }
       if (steer.lengthSq() > limit * limit) steer.setLength(limit);
       fish.vel.addScaledVector(steer, dt);
       const speed = THREE.MathUtils.clamp(fish.vel.length(), minSpeed, maxSpeed);
