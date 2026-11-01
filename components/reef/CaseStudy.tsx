@@ -83,7 +83,7 @@ export default function CaseStudy({ reduced }: { reduced: boolean }) {
     const backdrop = panel.parentElement;
     if (flipState.current) {
       Flip.from(flipState.current, { targets: panel, duration: 0.65, ease: "power3.inOut", absolute: true, scale: false });
-      gsap.from(panel.querySelectorAll(".case-body > *"), { opacity: 0, y: 14, duration: 0.45, stagger: 0.04, delay: 0.3, ease: "power2.out" });
+      gsap.from(panel.querySelectorAll(".case-body > *"), { opacity: 0, y: 14, duration: 0.45, stagger: 0.04, delay: 0.3, ease: "power2.out", clearProps: "transform,opacity" });
     } else {
       gsap.from(panel, { opacity: 0, y: reduced ? 0 : 18, duration: reduced ? 0.15 : 0.35, ease: "power2.out" });
     }
@@ -127,7 +127,14 @@ export default function CaseStudy({ reduced }: { reduced: boolean }) {
       background.forEach((el) => el.removeAttribute("inert"));
       root.style.overflow = prevOverflow;
       lenis?.start();
-      returnFocus.current?.focus({ preventScroll: true });
+      const trigger = returnFocus.current;
+      if (trigger) {
+        trigger.focus({ preventScroll: true });
+        // The panel unmounts in this same commit; re-assert on the next frame in case focus fell to <body>.
+        requestAnimationFrame(() => {
+          if (document.activeElement === document.body) trigger.focus({ preventScroll: true });
+        });
+      }
     };
   }, [open, close]);
 

@@ -1697,6 +1697,8 @@ html[data-tide="night"] .reef-fallback {
 .case-close {
   position: sticky;
   top: 0;
+  /* Above the body copy, whose entrance tween gives each block its own stacking context. */
+  z-index: 2;
   float: right;
   width: 44px;
   height: 44px;
