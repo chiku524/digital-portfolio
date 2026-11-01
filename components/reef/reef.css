@@ -432,9 +432,19 @@
 }
 
 /* Phone: the three cards of a group stacked, gently offset. */
-.project-block:nth-of-type(3n + 1) { left: 0; top: 8%; }
-.project-block:nth-of-type(3n + 2) { left: 13%; top: 39%; }
-.project-block:nth-of-type(3n + 3) { left: 3%; top: 70%; }
+/* Each group of three settles into its own arrangement: g1 high/low/mid, g2 low/high/low, g3 descending, g4 ascending. */
+.project-block:nth-of-type(1) { left: 0; top: 8%; }
+.project-block:nth-of-type(2) { left: 13%; top: 39%; }
+.project-block:nth-of-type(3) { left: 3%; top: 70%; }
+.project-block:nth-of-type(4) { left: 14%; top: 9%; }
+.project-block:nth-of-type(5) { left: 0; top: 40%; }
+.project-block:nth-of-type(6) { left: 12%; top: 71%; }
+.project-block:nth-of-type(7) { left: 0; top: 8%; }
+.project-block:nth-of-type(8) { left: 7%; top: 38%; }
+.project-block:nth-of-type(9) { left: 14%; top: 68%; }
+.project-block:nth-of-type(10) { left: 14%; top: 9%; }
+.project-block:nth-of-type(11) { left: 7%; top: 39%; }
+.project-block:nth-of-type(12) { left: 0; top: 70%; }
 
 .work-dots {
   position: absolute;
@@ -530,9 +540,19 @@
     -webkit-line-clamp: 2;
   }
 
-  .project-block:nth-of-type(3n + 1) { left: 0.5%; top: 4%; }
-  .project-block:nth-of-type(3n + 2) { left: 35%; top: 30%; }
-  .project-block:nth-of-type(3n + 3) { left: 69.5%; top: 9%; }
+  /* Each group of three settles into its own arrangement: g1 high/low/mid, g2 low/high/low, g3 descending, g4 ascending. */
+  .project-block:nth-of-type(1) { left: 0.5%; top: 4%; }
+  .project-block:nth-of-type(2) { left: 35%; top: 40%; }
+  .project-block:nth-of-type(3) { left: 69.5%; top: 22%; }
+  .project-block:nth-of-type(4) { left: 0.5%; top: 42%; }
+  .project-block:nth-of-type(5) { left: 35%; top: 4%; }
+  .project-block:nth-of-type(6) { left: 69.5%; top: 38%; }
+  .project-block:nth-of-type(7) { left: 0.5%; top: 3%; }
+  .project-block:nth-of-type(8) { left: 35%; top: 24%; }
+  .project-block:nth-of-type(9) { left: 69.5%; top: 46%; }
+  .project-block:nth-of-type(10) { left: 0.5%; top: 46%; }
+  .project-block:nth-of-type(11) { left: 35%; top: 24%; }
+  .project-block:nth-of-type(12) { left: 69.5%; top: 3%; }
 }
 
 @media (min-width: 1180px) {
@@ -567,9 +587,19 @@
     -webkit-line-clamp: 3;
   }
 
-  .project-block:nth-of-type(3n + 1) { left: 1%; top: 7%; }
-  .project-block:nth-of-type(3n + 2) { left: 35.5%; top: 43%; }
-  .project-block:nth-of-type(3n + 3) { left: 70%; top: 18%; }
+  /* Each group of three settles into its own arrangement: g1 high/low/mid, g2 low/high/low, g3 descending, g4 ascending. */
+  .project-block:nth-of-type(1) { left: 1%; top: 6%; }
+  .project-block:nth-of-type(2) { left: 35.5%; top: 52%; }
+  .project-block:nth-of-type(3) { left: 70%; top: 28%; }
+  .project-block:nth-of-type(4) { left: 1%; top: 50%; }
+  .project-block:nth-of-type(5) { left: 35.5%; top: 6%; }
+  .project-block:nth-of-type(6) { left: 70%; top: 46%; }
+  .project-block:nth-of-type(7) { left: 1%; top: 5%; }
+  .project-block:nth-of-type(8) { left: 35.5%; top: 30%; }
+  .project-block:nth-of-type(9) { left: 70%; top: 56%; }
+  .project-block:nth-of-type(10) { left: 1%; top: 56%; }
+  .project-block:nth-of-type(11) { left: 35.5%; top: 30%; }
+  .project-block:nth-of-type(12) { left: 70%; top: 5%; }
 }
 
 .stack h3,
