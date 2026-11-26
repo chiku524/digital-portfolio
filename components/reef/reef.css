@@ -380,6 +380,8 @@
   width: 3px;
   border-radius: 3px;
   background: linear-gradient(#ffb085, #ff4d6d 42%, #3fe0c8);
+  transform: scaleY(var(--bar, 1));
+  transform-origin: 50% 0;
 }
 
 .project-block .badge {

@@ -80,22 +80,112 @@ function workGroupAt(progress: number, range: Range, groups: number) {
   return Math.min(groups - 1, Math.max(0, Math.floor((progress - range.start) / seg + LEAD)));
 }
 
-function scatterSequence(tl: gsap.core.Timeline, range: Range, reduced: boolean) {
+/**
+ * Each project surfaces like something drifting out of the current: the card
+ * swims in from the side out of a blur, its accent line draws down, the badge
+ * slides in, the title rises word by word out of a mask, and the copy and links
+ * settle last. On the way out it is the reverse tide: the contents lift away
+ * top-first, the accent line retracts, and the card drifts up and off into the
+ * blue. Alternate cards travel in opposite directions. Scrubbed, so scrolling
+ * back up replays it in reverse.
+ */
+function projectIntro(
+  tl: gsap.core.Timeline,
+  article: HTMLElement,
+  parts: ProjectParts,
+  at: number,
+  d: number,
+  dir: number,
+  blur: boolean,
+) {
+  tl.fromTo(
+    article,
+    { autoAlpha: 0, x: dir * 36, y: 30, rotation: dir * -1.6, scale: 0.94, filter: blur ? "blur(10px)" : "none" },
+    { autoAlpha: 1, x: 0, y: 0, rotation: 0, scale: 1, filter: blur ? "blur(0px)" : "none", duration: d, ease: "power3.out", immediateRender: false },
+    at,
+  );
+  tl.fromTo(article, { "--bar": 0 }, { "--bar": 1, duration: d * 0.7, ease: "power2.inOut", immediateRender: false }, at + d * 0.12);
+  if (parts.badge) {
+    tl.fromTo(parts.badge, { autoAlpha: 0, x: dir * 18 }, { autoAlpha: 1, x: 0, duration: d * 0.5, ease: "power2.out", immediateRender: false }, at + d * 0.16);
+  }
+  if (parts.words.length) {
+    tl.fromTo(
+      parts.words,
+      { yPercent: 115, rotation: dir * 2 },
+      { yPercent: 0, rotation: 0, duration: d * 0.6, stagger: d * 0.08, ease: "expo.out", immediateRender: false },
+      at + d * 0.22,
+    );
+  }
+  if (parts.body.length) {
+    tl.fromTo(
+      parts.body,
+      { autoAlpha: 0, y: 12, filter: blur ? "blur(5px)" : "none" },
+      { autoAlpha: 1, y: 0, filter: blur ? "blur(0px)" : "none", duration: d * 0.5, stagger: d * 0.1, ease: "power2.out", immediateRender: false },
+      at + d * 0.4,
+    );
+  }
+}
+
+function projectOutro(
+  tl: gsap.core.Timeline,
+  article: HTMLElement,
+  parts: ProjectParts,
+  at: number,
+  d: number,
+  dir: number,
+  blur: boolean,
+) {
+  const contents = [parts.badge, parts.title, ...parts.body].filter(Boolean) as Element[];
+  tl.to(contents, { autoAlpha: 0, y: -14, duration: d * 0.45, stagger: d * 0.06, ease: "power2.in" }, at);
+  tl.to(article, { "--bar": 0, duration: d * 0.5, ease: "power2.in" }, at + d * 0.15);
+  tl.to(
+    article,
+    { autoAlpha: 0, x: dir * -26, y: -34, rotation: dir * 1.2, scale: 0.95, filter: blur ? "blur(8px)" : "none", duration: d, ease: "sine.in" },
+    at + d * 0.05,
+  );
+}
+
+type ProjectParts = { badge: Element | null; title: Element | null; words: Element[]; body: Element[] };
+
+function scatterSequence(tl: gsap.core.Timeline, range: Range, reduced: boolean, splits: Split[]) {
   const nodes = gsap.utils.toArray<HTMLElement>("#work .project-block");
   const count = nodes.length;
   if (!count || range.end <= range.start) return;
   const slices = workSlices(range, count);
+  const blur = !reefScroll.mobile;
 
   slices.forEach((slice, index) => {
     const article = nodes[index];
     const fadeIn = reduced ? 0.0001 : Math.max(slice.seg * FADE_IN, 0.0001);
     const fadeOut = reduced ? 0.0001 : Math.max(slice.seg * FADE_OUT, 0.0001);
-    tl.set(article, { autoAlpha: 0, y: reduced ? 0 : 22, pointerEvents: "none" }, 0);
-    tl.to(article, { autoAlpha: 1, y: 0, duration: fadeIn, ease: reduced ? "none" : "sine.out" }, slice.enter);
+
+    if (reduced) {
+      // Reduced motion: a plain, near-instant opacity swap with no travel.
+      tl.set(article, { autoAlpha: 0, pointerEvents: "none" }, 0);
+      tl.to(article, { autoAlpha: 1, duration: fadeIn }, slice.enter);
+      tl.set(article, { pointerEvents: "auto" }, slice.settled);
+      if (!slice.last) {
+        tl.set(article, { pointerEvents: "none" }, slice.exit);
+        tl.to(article, { autoAlpha: 0, duration: fadeOut }, slice.exit);
+      }
+      return;
+    }
+
+    const title = article.querySelector("h3");
+    const parts: ProjectParts = {
+      badge: article.querySelector(".badge"),
+      title,
+      words: masked(title, "words", splits),
+      body: [...article.querySelectorAll(".project-copy, .project-note, .project-links")],
+    };
+    const dir = index % 2 === 0 ? -1 : 1;
+
+    tl.set(article, { autoAlpha: 0, pointerEvents: "none", "--bar": 0 }, 0);
+    projectIntro(tl, article, parts, slice.enter, fadeIn, dir, blur);
     tl.set(article, { pointerEvents: "auto" }, slice.settled);
     if (!slice.last) {
       tl.set(article, { pointerEvents: "none" }, slice.exit);
-      tl.to(article, { autoAlpha: 0, y: reduced ? 0 : -14, duration: fadeOut, ease: reduced ? "none" : "sine.in" }, slice.exit);
+      projectOutro(tl, article, parts, slice.exit, fadeOut, dir, blur);
     }
   });
 }
@@ -430,7 +520,7 @@ export function mountDiveTimeline(options: {
       fadeGroup(tl, "about", vis.about, reduced, false, custom);
       if (custom) aboutIntro(tl, vis.about, splits);
 
-      scatterSequence(tl, vis.work, reduced);
+      scatterSequence(tl, vis.work, reduced, splits);
       fadeField(tl, vis.work, reduced, workLate);
 
       fadeGroup(tl, "skills", vis.skills, reduced, false, custom, SKILL_BEATS);

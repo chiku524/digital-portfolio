@@ -86,14 +86,6 @@ export const VALUES = [
 
 export const PROJECTS: Project[] = [
   {
-    name: "Blockchain Vibe",
-    badge: "Media lab",
-    description:
-      "Content engine that blends data, culture, and alpha leaks. Automation, editorial pipelines, and on-chain analytics for the web3 zeitgeist.",
-    highlight: "Automation pipelines, AI content flows, analytics stack.",
-    links: [{ label: "Open project", href: "https://blockchainvibe.news/" }],
-  },
-  {
     name: "Micro Paywall",
     badge: "Blockchain payments",
     description:
