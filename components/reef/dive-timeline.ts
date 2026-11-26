@@ -80,79 +80,300 @@ function workGroupAt(progress: number, range: Range, groups: number) {
   return Math.min(groups - 1, Math.max(0, Math.floor((progress - range.start) / seg + LEAD)));
 }
 
-/**
- * Each project surfaces like something drifting out of the current: the card
- * swims in from the side out of a blur, its accent line draws down, the badge
- * slides in, the title rises word by word out of a mask, and the copy and links
- * settle last. On the way out it is the reverse tide: the contents lift away
- * top-first, the accent line retracts, and the card drifts up and off into the
- * blue. Alternate cards travel in opposite directions. Scrubbed, so scrolling
- * back up replays it in reverse.
- */
-function projectIntro(
-  tl: gsap.core.Timeline,
-  article: HTMLElement,
-  parts: ProjectParts,
-  at: number,
-  d: number,
-  dir: number,
-  blur: boolean,
-) {
-  tl.fromTo(
-    article,
-    { autoAlpha: 0, x: dir * 36, y: 30, rotation: dir * -1.6, scale: 0.94, filter: blur ? "blur(10px)" : "none" },
-    { autoAlpha: 1, x: 0, y: 0, rotation: 0, scale: 1, filter: blur ? "blur(0px)" : "none", duration: d, ease: "power3.out", immediateRender: false },
-    at,
-  );
-  tl.fromTo(article, { "--bar": 0 }, { "--bar": 1, duration: d * 0.7, ease: "power2.inOut", immediateRender: false }, at + d * 0.12);
-  if (parts.badge) {
-    tl.fromTo(parts.badge, { autoAlpha: 0, x: dir * 18 }, { autoAlpha: 1, x: 0, duration: d * 0.5, ease: "power2.out", immediateRender: false }, at + d * 0.16);
-  }
-  if (parts.words.length) {
-    tl.fromTo(
-      parts.words,
-      { yPercent: 115, rotation: dir * 2 },
-      { yPercent: 0, rotation: 0, duration: d * 0.6, stagger: d * 0.08, ease: "expo.out", immediateRender: false },
-      at + d * 0.22,
-    );
-  }
-  if (parts.body.length) {
-    tl.fromTo(
-      parts.body,
-      { autoAlpha: 0, y: 12, filter: blur ? "blur(5px)" : "none" },
-      { autoAlpha: 1, y: 0, filter: blur ? "blur(0px)" : "none", duration: d * 0.5, stagger: d * 0.1, ease: "power2.out", immediateRender: false },
-      at + d * 0.4,
-    );
-  }
-}
-
-function projectOutro(
-  tl: gsap.core.Timeline,
-  article: HTMLElement,
-  parts: ProjectParts,
-  at: number,
-  d: number,
-  dir: number,
-  blur: boolean,
-) {
-  const contents = [parts.badge, parts.title, ...parts.body].filter(Boolean) as Element[];
-  tl.to(contents, { autoAlpha: 0, y: -14, duration: d * 0.45, stagger: d * 0.06, ease: "power2.in" }, at);
-  tl.to(article, { "--bar": 0, duration: d * 0.5, ease: "power2.in" }, at + d * 0.15);
-  tl.to(
-    article,
-    { autoAlpha: 0, x: dir * -26, y: -34, rotation: dir * 1.2, scale: 0.95, filter: blur ? "blur(8px)" : "none", duration: d, ease: "sine.in" },
-    at + d * 0.05,
-  );
-}
-
 type ProjectParts = { badge: Element | null; title: Element | null; words: Element[]; body: Element[] };
 
-function scatterSequence(tl: gsap.core.Timeline, range: Range, reduced: boolean, splits: Split[]) {
+type MotionCtx = {
+  tl: gsap.core.Timeline;
+  article: HTMLElement;
+  parts: ProjectParts;
+  /** Everything inside the card, top to bottom. */
+  contents: Element[];
+  at: number;
+  d: number;
+  /** A filter string, or "none" on phones where per-frame filters are too costly. */
+  fx: (filter: string, neutral: string) => string;
+};
+
+type ProjectMotion = {
+  name: string;
+  /** Mask the title words (they rise out of a clip) or leave them free to travel. */
+  mask: boolean;
+  /** Clip-path reveals carry their own visibility, so the card's opacity snaps in fast. */
+  clip?: boolean;
+  intro: (c: MotionCtx) => void;
+  outro: (c: MotionCtx) => void;
+};
+
+const FULL = "inset(-48px -48px -48px -48px round 20px)";
+const ease = (vars: gsap.TweenVars): gsap.TweenVars => ({ immediateRender: false, ...vars });
+
+function accent(c: MotionCtx, show: boolean, from = 0.12, length = 0.6) {
+  if (show) c.tl.fromTo(c.article, { "--bar": 0 }, ease({ "--bar": 1, duration: c.d * length, ease: "power2.inOut" }), c.at + c.d * from);
+  else c.tl.to(c.article, { "--bar": 0, duration: c.d * length, ease: "power2.in" }, c.at + c.d * from);
+}
+
+function settle(c: MotionCtx, items: Element[], from: gsap.TweenVars, at: number, length = 0.45, each = 0.08, easing = "power2.out") {
+  if (!items.length) return;
+  const to: gsap.TweenVars = { autoAlpha: 1, x: 0, y: 0, rotation: 0, scale: 1, duration: c.d * length, stagger: c.d * each, ease: easing };
+  if ("filter" in from) to.filter = c.fx("blur(0px)", "none");
+  c.tl.fromTo(items, { autoAlpha: 0, ...from }, ease(to), c.at + c.d * at);
+}
+
+function lift(c: MotionCtx, items: Element[], to: gsap.TweenVars, length = 0.45, each = 0.06, easing = "power2.in") {
+  if (!items.length) return;
+  c.tl.to(items, { autoAlpha: 0, duration: c.d * length, stagger: c.d * each, ease: easing, ...to }, c.at);
+}
+
+/**
+ * Eleven-plus distinct entrances and exits, one per project, all reef-themed.
+ * Every one is scrubbed, so scrolling back up plays it in reverse.
+ */
+const PROJECT_MOTIONS: ProjectMotion[] = [
+  {
+    name: "current",
+    mask: true,
+    // Swims in from the left out of a blur; drifts up and away to the right.
+    intro: (c) => {
+      c.tl.fromTo(c.article, { x: -48, y: 30, rotation: 1.6, scale: 0.94, filter: c.fx("blur(10px)", "none") }, ease({ x: 0, y: 0, rotation: 0, scale: 1, filter: c.fx("blur(0px)", "none"), duration: c.d, ease: "power3.out" }), c.at);
+      accent(c, true);
+      settle(c, c.parts.badge ? [c.parts.badge] : [], { x: -18 }, 0.16, 0.5);
+      c.tl.fromTo(c.parts.words, { yPercent: 115 }, ease({ yPercent: 0, duration: c.d * 0.6, stagger: c.d * 0.08, ease: "expo.out" }), c.at + c.d * 0.22);
+      settle(c, c.parts.body, { y: 12 }, 0.4, 0.5, 0.1);
+    },
+    outro: (c) => {
+      lift(c, c.contents, { y: -14 });
+      accent(c, false, 0.15, 0.5);
+      c.tl.to(c.article, { x: 30, y: -36, rotation: -1.2, scale: 0.95, filter: c.fx("blur(8px)", "none"), duration: c.d, ease: "sine.in" }, c.at + c.d * 0.05);
+    },
+  },
+  {
+    name: "bubble",
+    mask: false,
+    // Pops up from the seabed like a bubble; bursts outward on the way out.
+    intro: (c) => {
+      c.tl.fromTo(c.article, { scale: 0.55, y: 90, transformOrigin: "50% 100%" }, ease({ scale: 1, y: 0, duration: c.d, ease: "back.out(1.7)" }), c.at);
+      accent(c, true, 0.3, 0.5);
+      c.tl.fromTo(c.parts.words, { autoAlpha: 0, scale: 0, y: 20 }, ease({ autoAlpha: 1, scale: 1, y: 0, duration: c.d * 0.55, stagger: { each: c.d * 0.07, from: "random" }, ease: "elastic.out(1, 0.5)" }), c.at + c.d * 0.25);
+      settle(c, [c.parts.badge, ...c.parts.body].filter(Boolean) as Element[], { y: 18, scale: 0.8 }, 0.35, 0.5, 0.08, "back.out(2)");
+    },
+    outro: (c) => {
+      lift(c, c.contents, { scale: 0.6, y: -10 }, 0.4, 0.04, "back.in(2)");
+      accent(c, false, 0.1, 0.4);
+      c.tl.to(c.article, { keyframes: [{ scale: 1.06, duration: c.d * 0.35, ease: "sine.out" }, { scale: 0.4, y: -60, duration: c.d * 0.65, ease: "back.in(1.8)" }] }, c.at);
+    },
+  },
+  {
+    name: "curtain",
+    mask: true,
+    clip: true,
+    // Unfurls top-down like a curtain of current; rolls back up and away.
+    intro: (c) => {
+      c.tl.fromTo(c.article, { clipPath: "inset(-48px -48px 100% -48px round 20px)", y: -18 }, ease({ clipPath: FULL, y: 0, duration: c.d, ease: "power3.inOut" }), c.at);
+      accent(c, true, 0, 0.9);
+      c.tl.fromTo(c.parts.words, { yPercent: -115 }, ease({ yPercent: 0, duration: c.d * 0.55, stagger: c.d * 0.06, ease: "power3.out" }), c.at + c.d * 0.3);
+      settle(c, [c.parts.badge, ...c.parts.body].filter(Boolean) as Element[], { x: -24 }, 0.35, 0.5, 0.08, "sine.out");
+    },
+    outro: (c) => {
+      lift(c, [...c.contents].reverse(), { x: 24 }, 0.4, 0.05);
+      accent(c, false, 0.2, 0.5);
+      c.tl.to(c.article, { clipPath: "inset(-48px -48px 100% -48px round 20px)", y: -24, duration: c.d, ease: "power3.inOut" }, c.at);
+    },
+  },
+  {
+    name: "sonar",
+    mask: true,
+    clip: true,
+    // A sonar ping opens the card from its left edge; it closes into the right edge.
+    intro: (c) => {
+      c.tl.fromTo(c.article, { clipPath: "circle(0% at 0% 50%)" }, ease({ clipPath: "circle(220% at 0% 50%)", duration: c.d, ease: "power2.inOut" }), c.at);
+      accent(c, true, 0, 0.4);
+      c.tl.fromTo(c.parts.words, { yPercent: 110, rotation: 4 }, ease({ yPercent: 0, rotation: 0, duration: c.d * 0.6, stagger: c.d * 0.07, ease: "expo.out" }), c.at + c.d * 0.3);
+      settle(c, [c.parts.badge, ...c.parts.body].filter(Boolean) as Element[], { x: -30, filter: c.fx("blur(4px)", "none") }, 0.25, 0.5, 0.08);
+    },
+    outro: (c) => {
+      lift(c, c.contents, { x: 30 }, 0.45, 0.05);
+      accent(c, false, 0, 0.4);
+      c.tl.fromTo(c.article, { clipPath: "circle(220% at 100% 50%)" }, ease({ clipPath: "circle(0% at 100% 50%)", duration: c.d, ease: "power2.inOut" }), c.at);
+    },
+  },
+  {
+    name: "depth",
+    mask: true,
+    // Rises from the deep, tilted back in perspective; sinks again on the way out.
+    intro: (c) => {
+      c.tl.fromTo(c.article, { y: 140, rotationX: 38, scale: 0.86, transformPerspective: 700, transformOrigin: "50% 100%", filter: c.fx("blur(12px) brightness(0.5)", "none") }, ease({ y: 0, rotationX: 0, scale: 1, filter: c.fx("blur(0px) brightness(1)", "none"), duration: c.d, ease: "power3.out" }), c.at);
+      accent(c, true, 0.4, 0.5);
+      c.tl.fromTo(c.parts.words, { yPercent: 120 }, ease({ yPercent: 0, duration: c.d * 0.5, stagger: c.d * 0.1, ease: "power4.out" }), c.at + c.d * 0.35);
+      settle(c, [c.parts.badge, ...c.parts.body].filter(Boolean) as Element[], { y: 24 }, 0.45, 0.45, 0.06);
+    },
+    outro: (c) => {
+      lift(c, c.contents, { y: 16 }, 0.4, 0.04);
+      accent(c, false, 0, 0.4);
+      c.tl.to(c.article, { y: 120, rotationX: -30, scale: 0.88, transformPerspective: 700, filter: c.fx("blur(10px) brightness(0.4)", "none"), duration: c.d, ease: "power2.in" }, c.at);
+    },
+  },
+  {
+    name: "kelp",
+    mask: false,
+    // Sways in like a kelp frond anchored at its base; swings off the other way.
+    intro: (c) => {
+      c.tl.fromTo(c.article, { rotation: -14, x: -40, transformOrigin: "0% 100%" }, ease({ rotation: 0, x: 0, duration: c.d, ease: "elastic.out(1, 0.55)" }), c.at);
+      accent(c, true, 0.15, 0.6);
+      c.tl.fromTo(c.parts.words, { autoAlpha: 0, skewX: -25, x: -16 }, ease({ autoAlpha: 1, skewX: 0, x: 0, duration: c.d * 0.55, stagger: c.d * 0.08, ease: "elastic.out(1, 0.6)" }), c.at + c.d * 0.25);
+      settle(c, [c.parts.badge, ...c.parts.body].filter(Boolean) as Element[], { rotation: -4, y: 10 }, 0.35, 0.5, 0.08, "back.out(1.6)");
+    },
+    outro: (c) => {
+      lift(c, c.contents, { skewX: 20, x: 20 }, 0.4, 0.05);
+      accent(c, false, 0.1, 0.5);
+      c.tl.to(c.article, { rotation: 16, x: 60, transformOrigin: "100% 100%", duration: c.d, ease: "back.in(1.4)" }, c.at);
+    },
+  },
+  {
+    name: "turn",
+    mask: true,
+    // Turns toward you like a fish showing its side; turns away to exit.
+    intro: (c) => {
+      c.tl.fromTo(c.article, { rotationY: -85, transformPerspective: 900, transformOrigin: "0% 50%" }, ease({ rotationY: 0, duration: c.d, ease: "power3.out" }), c.at);
+      accent(c, true, 0.35, 0.5);
+      c.tl.fromTo(c.parts.words, { yPercent: 100 }, ease({ yPercent: 0, duration: c.d * 0.5, stagger: c.d * 0.06, ease: "power3.out" }), c.at + c.d * 0.4);
+      settle(c, [c.parts.badge, ...c.parts.body].filter(Boolean) as Element[], { x: 20 }, 0.45, 0.45, 0.06);
+    },
+    outro: (c) => {
+      lift(c, c.contents, { x: -16 }, 0.35, 0.04);
+      accent(c, false, 0, 0.35);
+      c.tl.to(c.article, { rotationY: 85, transformPerspective: 900, transformOrigin: "100% 50%", duration: c.d, ease: "power2.in" }, c.at);
+    },
+  },
+  {
+    name: "shoal",
+    mask: false,
+    // Title words gather like a shoal from every direction; scatter again on exit.
+    intro: (c) => {
+      c.tl.fromTo(c.article, { scale: 0.97 }, ease({ scale: 1, duration: c.d, ease: "sine.out" }), c.at);
+      accent(c, true, 0.5, 0.4);
+      c.tl.fromTo(
+        c.parts.words,
+        { autoAlpha: 0, x: () => gsap.utils.random(-160, 160), y: () => gsap.utils.random(-90, 90), rotation: () => gsap.utils.random(-40, 40) },
+        ease({ autoAlpha: 1, x: 0, y: 0, rotation: 0, duration: c.d * 0.75, stagger: { each: c.d * 0.04, from: "random" }, ease: "power3.out" }),
+        c.at,
+      );
+      settle(c, [c.parts.badge, ...c.parts.body].filter(Boolean) as Element[], { x: () => gsap.utils.random(-60, 60), y: () => gsap.utils.random(-30, 30) }, 0.2, 0.6, 0.06, "power3.out");
+    },
+    outro: (c) => {
+      c.tl.to(c.parts.words, { autoAlpha: 0, x: () => gsap.utils.random(-180, 180), y: () => gsap.utils.random(-100, 100), rotation: () => gsap.utils.random(-50, 50), duration: c.d * 0.7, stagger: { each: c.d * 0.04, from: "random" }, ease: "power2.in" }, c.at);
+      lift(c, [c.parts.badge, ...c.parts.body].filter(Boolean) as Element[], { x: () => gsap.utils.random(-80, 80), y: () => gsap.utils.random(-40, 40) }, 0.6, 0.05);
+      accent(c, false, 0, 0.4);
+      c.tl.to(c.article, { scale: 0.97, duration: c.d, ease: "sine.in" }, c.at);
+    },
+  },
+  {
+    name: "shaft",
+    mask: true,
+    clip: true,
+    // A shaft of light opens from the centre outward; it narrows back to a sliver.
+    intro: (c) => {
+      c.tl.fromTo(c.article, { clipPath: "inset(-48px 50% -48px 50% round 20px)", filter: c.fx("brightness(2.2)", "none") }, ease({ clipPath: FULL, filter: c.fx("brightness(1)", "none"), duration: c.d, ease: "expo.inOut" }), c.at);
+      accent(c, true, 0.4, 0.5);
+      c.tl.fromTo(c.parts.words, { yPercent: 110, autoAlpha: 0 }, ease({ yPercent: 0, autoAlpha: 1, duration: c.d * 0.5, stagger: { each: c.d * 0.06, from: "center" }, ease: "power3.out" }), c.at + c.d * 0.35);
+      settle(c, [c.parts.badge, ...c.parts.body].filter(Boolean) as Element[], { scale: 0.9 }, 0.45, 0.45, 0.06);
+    },
+    outro: (c) => {
+      lift(c, c.contents, { scale: 0.92 }, 0.4, 0.04);
+      accent(c, false, 0, 0.4);
+      c.tl.to(c.article, { clipPath: "inset(-48px 50% -48px 50% round 20px)", filter: c.fx("brightness(2.2)", "none"), duration: c.d, ease: "expo.inOut" }, c.at);
+    },
+  },
+  {
+    name: "wave",
+    mask: false,
+    // Rolls in on a wave from the right, contents bobbing; washes out to the left.
+    intro: (c) => {
+      c.tl.fromTo(c.article, { x: 120, skewX: -14 }, ease({ x: 0, skewX: 0, duration: c.d, ease: "elastic.out(1, 0.7)" }), c.at);
+      accent(c, true, 0.2, 0.5);
+      c.tl.fromTo(c.parts.words, { autoAlpha: 0, y: (i: number) => (i % 2 ? 22 : -22) }, ease({ autoAlpha: 1, y: 0, duration: c.d * 0.6, stagger: c.d * 0.06, ease: "sine.inOut" }), c.at + c.d * 0.2);
+      settle(c, [c.parts.badge, ...c.parts.body].filter(Boolean) as Element[], { x: 40 }, 0.3, 0.5, 0.08, "sine.out");
+    },
+    outro: (c) => {
+      c.tl.to(c.parts.words, { autoAlpha: 0, y: (i: number) => (i % 2 ? -20 : 20), duration: c.d * 0.45, stagger: c.d * 0.04, ease: "sine.in" }, c.at);
+      lift(c, [c.parts.badge, ...c.parts.body].filter(Boolean) as Element[], { x: -40 }, 0.45, 0.05);
+      accent(c, false, 0.1, 0.4);
+      c.tl.to(c.article, { x: -140, skewX: 14, duration: c.d, ease: "power2.in" }, c.at);
+    },
+  },
+  {
+    name: "drift-down",
+    mask: true,
+    // Settles down from the surface like falling sediment; tumbles on into the deep.
+    intro: (c) => {
+      c.tl.fromTo(c.article, { y: -120, x: -30, rotation: -8 }, ease({ y: 0, x: 0, rotation: 0, duration: c.d, ease: "power4.out" }), c.at);
+      accent(c, true, 0.25, 0.55);
+      c.tl.fromTo(c.parts.words, { yPercent: -110 }, ease({ yPercent: 0, duration: c.d * 0.55, stagger: c.d * 0.07, ease: "bounce.out" }), c.at + c.d * 0.3);
+      settle(c, [c.parts.badge, ...c.parts.body].filter(Boolean) as Element[], { y: -16 }, 0.4, 0.5, 0.08);
+    },
+    outro: (c) => {
+      lift(c, [...c.contents].reverse(), { y: 20 }, 0.4, 0.05);
+      accent(c, false, 0.1, 0.4);
+      c.tl.to(c.article, { y: 140, x: 40, rotation: 10, duration: c.d, ease: "power3.in" }, c.at);
+    },
+  },
+  {
+    name: "glow",
+    mask: true,
+    // Blooms out of a burst of bioluminescence; dims to the dark on exit.
+    intro: (c) => {
+      c.tl.fromTo(c.article, { scale: 1.12, filter: c.fx("brightness(2.4) blur(14px)", "none") }, ease({ scale: 1, filter: c.fx("brightness(1) blur(0px)", "none"), duration: c.d, ease: "power2.out" }), c.at);
+      accent(c, true, 0.1, 0.7);
+      c.tl.fromTo(c.parts.words, { yPercent: 100, autoAlpha: 0 }, ease({ yPercent: 0, autoAlpha: 1, duration: c.d * 0.6, stagger: c.d * 0.05, ease: "power2.out" }), c.at + c.d * 0.3);
+      settle(c, [c.parts.badge, ...c.parts.body].filter(Boolean) as Element[], { filter: c.fx("blur(6px)", "none") }, 0.4, 0.5, 0.08);
+    },
+    outro: (c) => {
+      lift(c, c.contents, { filter: c.fx("blur(6px)", "none") }, 0.5, 0.05);
+      accent(c, false, 0.1, 0.5);
+      c.tl.to(c.article, { scale: 0.9, filter: c.fx("brightness(0.2) blur(10px)", "none"), duration: c.d, ease: "power2.in" }, c.at);
+    },
+  },
+  {
+    name: "diagonal",
+    mask: true,
+    clip: true,
+    // Wiped in on a diagonal sweep from the bottom-left; wiped out toward the top-right.
+    intro: (c) => {
+      c.tl.fromTo(c.article, { clipPath: "polygon(0% 100%, 0% 100%, 0% 100%, 0% 100%)" }, ease({ clipPath: "polygon(-10% -10%, 210% -10%, 110% 110%, -10% 110%)", duration: c.d, ease: "power3.inOut" }), c.at);
+      accent(c, true, 0.1, 0.6);
+      c.tl.fromTo(c.parts.words, { yPercent: 110, xPercent: -20 }, ease({ yPercent: 0, xPercent: 0, duration: c.d * 0.55, stagger: c.d * 0.06, ease: "power3.out" }), c.at + c.d * 0.3);
+      settle(c, [c.parts.badge, ...c.parts.body].filter(Boolean) as Element[], { x: -20, y: 20 }, 0.35, 0.5, 0.07);
+    },
+    outro: (c) => {
+      lift(c, c.contents, { x: 20, y: -20 }, 0.45, 0.05);
+      accent(c, false, 0.1, 0.4);
+      c.tl.to(c.article, { clipPath: "polygon(110% -10%, 110% -10%, 110% -10%, 110% -10%)", duration: c.d, ease: "power3.inOut" }, c.at);
+    },
+  },
+  {
+    name: "zoom",
+    mask: true,
+    // Swims straight at you out of the distance; recedes back into it.
+    intro: (c) => {
+      c.tl.fromTo(c.article, { scale: 0.5, z: -200, transformPerspective: 800, filter: c.fx("blur(10px)", "none") }, ease({ scale: 1, z: 0, filter: c.fx("blur(0px)", "none"), duration: c.d, ease: "expo.out" }), c.at);
+      accent(c, true, 0.3, 0.5);
+      c.tl.fromTo(c.parts.words, { yPercent: 110, scale: 1.4 }, ease({ yPercent: 0, scale: 1, duration: c.d * 0.55, stagger: c.d * 0.06, ease: "expo.out" }), c.at + c.d * 0.3);
+      settle(c, [c.parts.badge, ...c.parts.body].filter(Boolean) as Element[], { scale: 1.1 }, 0.4, 0.45, 0.06);
+    },
+    outro: (c) => {
+      lift(c, c.contents, { scale: 0.9 }, 0.4, 0.04);
+      accent(c, false, 0, 0.4);
+      c.tl.to(c.article, { scale: 0.5, filter: c.fx("blur(10px)", "none"), duration: c.d, ease: "expo.in" }, c.at);
+    },
+  },
+];
+
+function scatterSequence(tl: gsap.core.Timeline, range: Range, reduced: boolean, splits: Split[], late = 0) {
   const nodes = gsap.utils.toArray<HTMLElement>("#work .project-block");
   const count = nodes.length;
   if (!count || range.end <= range.start) return;
   const slices = workSlices(range, count);
-  const blur = !reefScroll.mobile;
+  const rich = !reefScroll.mobile;
+  const fx = (filter: string, neutral: string) => (rich ? filter : neutral);
 
   slices.forEach((slice, index) => {
     const article = nodes[index];
@@ -171,21 +392,37 @@ function scatterSequence(tl: gsap.core.Timeline, range: Range, reduced: boolean,
       return;
     }
 
+    const motion = PROJECT_MOTIONS[index % PROJECT_MOTIONS.length];
     const title = article.querySelector("h3");
+    let words: Element[] = [];
+    if (title) {
+      const split = SplitText.create(title, { type: "words", mask: motion.mask ? "words" : undefined });
+      splits.push(split);
+      words = split.words;
+    }
     const parts: ProjectParts = {
       badge: article.querySelector(".badge"),
       title,
-      words: masked(title, "words", splits),
+      words,
       body: [...article.querySelectorAll(".project-copy, .project-note, .project-links")],
     };
-    const dir = index % 2 === 0 ? -1 : 1;
+    const contents = [parts.badge, parts.title, ...parts.body].filter(Boolean) as Element[];
+    const base = { tl, article, parts, contents, fx };
+    // Clip reveals carry their own visibility; others fade with their travel.
+    const show = motion.clip ? 0.12 : 0.55;
 
     tl.set(article, { autoAlpha: 0, pointerEvents: "none", "--bar": 0 }, 0);
-    projectIntro(tl, article, parts, slice.enter, fadeIn, dir, blur);
+    tl.fromTo(article, { autoAlpha: 0 }, ease({ autoAlpha: 1, duration: fadeIn * show, ease: "sine.out" }), slice.enter);
+    motion.intro({ ...base, at: slice.enter, d: fadeIn });
     tl.set(article, { pointerEvents: "auto" }, slice.settled);
     if (!slice.last) {
       tl.set(article, { pointerEvents: "none" }, slice.exit);
-      projectOutro(tl, article, parts, slice.exit, fadeOut, dir, blur);
+      motion.outro({ ...base, at: slice.exit, d: fadeOut });
+      tl.to(article, { autoAlpha: 0, duration: fadeOut * show, ease: "sine.in" }, slice.exit + fadeOut * (1 - show));
+    } else {
+      // The last card leaves with the field, but still plays its own exit while it goes.
+      const leave = workExit(range);
+      motion.outro({ ...base, at: Math.max(range.start, range.end - leave + late), d: leave });
     }
   });
 }
@@ -520,7 +757,7 @@ export function mountDiveTimeline(options: {
       fadeGroup(tl, "about", vis.about, reduced, false, custom);
       if (custom) aboutIntro(tl, vis.about, splits);
 
-      scatterSequence(tl, vis.work, reduced, splits);
+      scatterSequence(tl, vis.work, reduced, splits, workLate);
       fadeField(tl, vis.work, reduced, workLate);
 
       fadeGroup(tl, "skills", vis.skills, reduced, false, custom, SKILL_BEATS);
